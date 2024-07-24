@@ -11,7 +11,7 @@ from .util.functools import wrapped_partial
 AnyDataFrame = Union[pd.DataFrame, gpd.GeoDataFrame]
 
 
-@pd.api.extensions.register_dataframe_accessor("rHP")
+@pd.api.extensions.register_dataframe_accessor("rhp")
 class rHPAccessor:
     """
     Shamelessly appropriated from equivalent class in h3pandas package

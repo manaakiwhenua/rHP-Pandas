@@ -133,7 +133,10 @@ class TestRhpGetResolution:
 
 
 class TestRhpGetBaseCell:
-    pass
+    def test_rhp_get_base_cell(self, indexed_dataframe):
+        expected = indexed_dataframe.assign(rhp_base_cell=["N", "N"])
+        result = indexed_dataframe.rhp.rhp_get_base_cell()
+        pd.testing.assert_frame_equal(expected, result)
 
 
 class TestRhpIsValid:

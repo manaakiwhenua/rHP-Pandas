@@ -3,7 +3,7 @@ import pytest
 import pandas as pd
 import geopandas as gpd
 from geopandas.testing import assert_geodataframe_equal
-from shapely.geometry import box
+from shapely.geometry import box, Polygon
 
 from rhppandas import rhppandas
 from rhealpixdggs import rhp_wrappers
@@ -34,6 +34,25 @@ def indexed_dataframe(basic_dataframe):
     """DataFrame with lat, lng and resolution 9 rHEALPix index"""
     return basic_dataframe.assign(rhp_09=["N216055611", "N208542111"]).set_index(
         "rhp_09"
+    )
+
+
+@pytest.fixture
+def rhp_dataframe_with_values():
+    """DataFrame with resolution 9 rHEALPix index and values"""
+    index = ["N216055611", "N216055612", "N216055615"]
+    return pd.DataFrame({"val": [1, 2, 5]}, index=index)
+
+
+@pytest.fixture
+def rhp_geodataframe_with_values(rhp_dataframe_with_values):
+    """GeoDataFrame with resolution 9 rHEALPix index, values, and cell geometries"""
+    geometry = [
+        Polygon(rhp.rhp_to_geo_boundary(h, True))
+        for h in rhp_dataframe_with_values.index
+    ]
+    return gpd.GeoDataFrame(
+        rhp_dataframe_with_values, geometry=geometry, crs="epsg:4326"
     )
 
 
@@ -93,7 +112,26 @@ class TestKRing:
 
 
 class TestRhpToParent:
-    pass  # TODO
+    def test_rhp_to_parent_level_1(self, rhp_dataframe_with_values):
+        rhp_parent = "N2"
+        result = rhp_dataframe_with_values.rhp.rhp_to_parent(1)
+        expected = rhp_dataframe_with_values.assign(rhp_01=rhp_parent)
+
+        pd.testing.assert_frame_equal(expected, result)
+
+    def test_rhp_to_direct_parent(self, rhp_dataframe_with_values):
+        rhp_parents = ["N21605561", "N21605561", "N21605561"]
+        result = rhp_dataframe_with_values.rhp.rhp_to_parent()
+        expected = rhp_dataframe_with_values.assign(rhp_parent=rhp_parents)
+
+        pd.testing.assert_frame_equal(expected, result)
+
+    def test_rhp_to_parent_level_0(self, rhp_dataframe_with_values):
+        rhp_parent = "N"
+        result = rhp_dataframe_with_values.rhp.rhp_to_parent(0)
+        expected = rhp_dataframe_with_values.assign(rhp_00=rhp_parent)
+
+        pd.testing.assert_frame_equal(expected, result)
 
 
 class TestRhpToCenterChild:

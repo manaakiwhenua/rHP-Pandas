@@ -24,7 +24,7 @@ def basic_geodataframe(basic_dataframe):
 
 
 @pytest.fixture
-def basic_geodataframe_polygon(basic_geodataframe):
+def basic_geodataframe_polygon():
     geom = box(0, 0, 1, 1)
     return gpd.GeoDataFrame(geometry=[geom], crs="epsg:4326")
 
@@ -81,9 +81,39 @@ class TestGeoToRhp:
 
 class TestRhpToGeo:
     pass
+    # def test_rhp_to_geo(self, indexed_dataframe):
+    #     lats = [50.000551554902586, 51.000121447274736]
+    #     lngs = [14.000372151097624, 14.999768926738376]
+    #     geometry = gpd.points_from_xy(x=lngs, y=lats, crs="epsg:4326")
+    #     expected = gpd.GeoDataFrame(indexed_dataframe, geometry=geometry)
+    #     result = indexed_dataframe.rhp.rhp_to_geo()
+    #     assert_geodataframe_equal(expected, result, check_less_precise=True)
 
 
 class TestRhpToGeoBoundary:
+    def test_rhp_to_geo_boundary(self, indexed_dataframe):
+        c1 = (
+            (13.996245382425982, 50.004590579705954),
+            (14.001695633743132, 50.004590579705954),
+            (14.005449591280690, 49.999532956048753),
+            (14.000000000000031, 49.999532956048753),
+            (13.996245382425982, 50.004590579705954),
+        )
+        c2 = (
+            (14.993485139914398, 51.004375558275498),
+            (14.999069305702077, 51.004375558275498),
+            (15.002791736460116, 50.999334171715851),
+            (14.997208263539958, 50.999334171715851),
+            (14.993485139914398, 51.004375558275498),
+        )
+        geometry = [Polygon(c1), Polygon(c2)]
+
+        result = indexed_dataframe.rhp.rhp_to_geo_boundary()
+        expected = gpd.GeoDataFrame(
+            indexed_dataframe, geometry=geometry, crs="epsg:4326"
+        )
+        assert_geodataframe_equal(expected, result, check_less_precise=True)
+
     def test_rhp_to_geo_boundary_wrong_index(self, indexed_dataframe):
         indexed_dataframe.index = [str(indexed_dataframe.index[0])] + ["invalid"]
         with pytest.raises(AssertionError):

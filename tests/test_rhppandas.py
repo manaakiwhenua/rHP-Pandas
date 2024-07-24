@@ -80,14 +80,13 @@ class TestGeoToRhp:
 
 
 class TestRhpToGeo:
-    pass
-    # def test_rhp_to_geo(self, indexed_dataframe):
-    #     lats = [50.000551554902586, 51.000121447274736]
-    #     lngs = [14.000372151097624, 14.999768926738376]
-    #     geometry = gpd.points_from_xy(x=lngs, y=lats, crs="epsg:4326")
-    #     expected = gpd.GeoDataFrame(indexed_dataframe, geometry=geometry)
-    #     result = indexed_dataframe.rhp.rhp_to_geo()
-    #     assert_geodataframe_equal(expected, result, check_less_precise=True)
+    def test_rhp_to_geo(self, indexed_dataframe):
+        lats = [50.00206177482531, 51.00185487171624]
+        lngs = [14.000847727642356, 14.998138688394192]
+        geometry = gpd.points_from_xy(x=lngs, y=lats, crs="epsg:4326")
+        expected = gpd.GeoDataFrame(indexed_dataframe, geometry=geometry)
+        result = indexed_dataframe.rhp.rhp_to_geo()
+        assert_geodataframe_equal(expected, result, check_less_precise=True)
 
 
 class TestRhpToGeoBoundary:

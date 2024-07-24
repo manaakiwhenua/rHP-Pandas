@@ -72,7 +72,30 @@ class rHPAccessor:
         return df
 
     def rhp_to_geo(self) -> gpd.GeoDataFrame:
-        pass
+        """Add `geometry` with centroid of each rHEALPix address to the DataFrame.
+        Assumes rHEALPix index.
+
+        Returns
+        -------
+        GeoDataFrame with Point geometry
+
+        Raises
+        ------
+        AssertionError
+            When an invalid rHEALPix address is encountered
+
+        See Also
+        --------
+        rhp_to_geo_boundary : Adds an rHEALPix cell
+        """
+        return self._apply_index_assign(
+            wrapped_partial(rhp_py.rhp_to_geo, geo_json=True, plane=False),
+            "geometry",
+            lambda x: shapely.geometry.Point(x),
+            lambda x: gpd.GeoDataFrame(
+                x, crs="epsg:4326"
+            ),  # TODO: add correct coordinate system?
+        )
 
     def rhp_to_geo_boundary(self) -> AnyDataFrame:
         """Add `geometry` with rHEALPix squares to the DataFrame. Assumes rHEALPix index.

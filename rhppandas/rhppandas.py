@@ -114,7 +114,10 @@ class rHPAccessor:
         )
 
     def rhp_get_resolution(self) -> AnyDataFrame:
-        pass
+        """
+        Adds a column rhp_resolution with the resolution of each cell to the dataframe.
+        """
+        return self._apply_index_assign(rhp_py.rhp_get_resolution, "rhp_resolution")
 
     def rhp_get_base_cell(self) -> AnyDataFrame:
         pass

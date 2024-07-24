@@ -6,7 +6,7 @@ from geopandas.testing import assert_geodataframe_equal
 from shapely.geometry import box, Polygon
 
 from rhppandas import rhppandas
-from rhealpixdggs import rhp_wrappers
+from rhealpixdggs import rhp_wrappers as rhp_py
 
 
 # Fixtures
@@ -48,7 +48,7 @@ def rhp_dataframe_with_values():
 def rhp_geodataframe_with_values(rhp_dataframe_with_values):
     """GeoDataFrame with resolution 9 rHEALPix index, values, and cell geometries"""
     geometry = [
-        Polygon(rhp.rhp_to_geo_boundary(h, True))
+        Polygon(rhp_py.rhp_to_geo_boundary(h, True))
         for h in rhp_dataframe_with_values.index
     ]
     return gpd.GeoDataFrame(
@@ -120,7 +120,16 @@ class TestRhpToGeoBoundary:
 
 
 class TestRhpGetResolution:
-    pass
+    def test_rhp_get_resolution(self, rhp_dataframe_with_values):
+        expected = rhp_dataframe_with_values.assign(rhp_resolution=9)
+        result = rhp_dataframe_with_values.rhp.rhp_get_resolution()
+        pd.testing.assert_frame_equal(expected, result)
+
+    def test_rhp_get_resolution_index_only(self, rhp_dataframe_with_values):
+        del rhp_dataframe_with_values["val"]
+        expected = rhp_dataframe_with_values.assign(rhp_resolution=9)
+        result = rhp_dataframe_with_values.rhp.rhp_get_resolution()
+        pd.testing.assert_frame_equal(expected, result)
 
 
 class TestRhpGetBaseCell:

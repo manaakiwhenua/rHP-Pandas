@@ -10,9 +10,6 @@ from rhealpixdggs import rhp_wrappers
 
 
 # Fixtures
-# NOTE: These are the same as those in h3pandas
-
-
 @pytest.fixture
 def basic_dataframe():
     """DataFrame with lat and lng columns"""
@@ -32,6 +29,15 @@ def basic_geodataframe_polygon(basic_geodataframe):
     return gpd.GeoDataFrame(geometry=[geom], crs="epsg:4326")
 
 
+@pytest.fixture
+def indexed_dataframe(basic_dataframe):
+    """DataFrame with lat, lng and resolution 9 rHEALPix index"""
+    return basic_dataframe.assign(rhp_09=["N216055611", "N208542111"]).set_index(
+        "rhp_09"
+    )
+
+
+# Tests: rHEALPix wrapper API
 class TestGeoToRhp:
     def test_geo_to_rhp(self, basic_dataframe):
         result = basic_dataframe.rhp.geo_to_rhp(9)
@@ -59,7 +65,10 @@ class TestRhpToGeo:
 
 
 class TestRhpToGeoBoundary:
-    pass  # TODO
+    def test_rhp_to_geo_boundary_wrong_index(self, indexed_dataframe):
+        indexed_dataframe.index = [str(indexed_dataframe.index[0])] + ["invalid"]
+        with pytest.raises(AssertionError):
+            indexed_dataframe.rhp.rhp_to_geo_boundary()
 
 
 class TestRhpGetResolution:

@@ -86,6 +86,7 @@ class TestRhpToGeo:
         geometry = gpd.points_from_xy(x=lngs, y=lats, crs="epsg:4326")
         expected = gpd.GeoDataFrame(indexed_dataframe, geometry=geometry)
         result = indexed_dataframe.rhp.rhp_to_geo()
+
         assert_geodataframe_equal(expected, result, check_less_precise=True)
 
 
@@ -111,6 +112,7 @@ class TestRhpToGeoBoundary:
         expected = gpd.GeoDataFrame(
             indexed_dataframe, geometry=geometry, crs="epsg:4326"
         )
+
         assert_geodataframe_equal(expected, result, check_less_precise=True)
 
     def test_rhp_to_geo_boundary_wrong_index(self, indexed_dataframe):
@@ -127,6 +129,7 @@ class TestRhpToGeoBoundary:
         expected = gpd.GeoDataFrame(
             indexed_dataframe, geometry=geometry, crs="epsg:4326"
         )
+
         assert_geodataframe_equal(expected, result, check_less_precise=True)
 
 
@@ -134,12 +137,14 @@ class TestRhpGetResolution:
     def test_rhp_get_resolution(self, rhp_dataframe_with_values):
         expected = rhp_dataframe_with_values.assign(rhp_resolution=9)
         result = rhp_dataframe_with_values.rhp.rhp_get_resolution()
+
         pd.testing.assert_frame_equal(expected, result)
 
     def test_rhp_get_resolution_index_only(self, rhp_dataframe_with_values):
         del rhp_dataframe_with_values["val"]
         expected = rhp_dataframe_with_values.assign(rhp_resolution=9)
         result = rhp_dataframe_with_values.rhp.rhp_get_resolution()
+
         pd.testing.assert_frame_equal(expected, result)
 
 
@@ -147,6 +152,7 @@ class TestRhpGetBaseCell:
     def test_rhp_get_base_cell(self, indexed_dataframe):
         expected = indexed_dataframe.assign(rhp_base_cell=["N", "N"])
         result = indexed_dataframe.rhp.rhp_get_base_cell()
+
         pd.testing.assert_frame_equal(expected, result)
 
 
@@ -155,6 +161,7 @@ class TestRhpIsValid:
         indexed_dataframe.index = [str(indexed_dataframe.index[0])] + ["invalid"]
         expected = indexed_dataframe.assign(rhp_is_valid=[True, False])
         result = indexed_dataframe.rhp.rhp_is_valid()
+
         pd.testing.assert_frame_equal(expected, result)
 
 
@@ -191,7 +198,28 @@ class TestRhpToParent:
 
 
 class TestRhpToCenterChild:
-    pass
+    def test_rhp_to_center_child(self, indexed_dataframe):
+        expected = indexed_dataframe.assign(
+            rhp_center_child=["N216055611444", "N208542111444"]
+        )
+        result = indexed_dataframe.rhp.rhp_to_center_child(13)
+
+        pd.testing.assert_frame_equal(expected, result)
+
+    def test_rhp_to_center_child_one_level(self, indexed_dataframe):
+        expected = indexed_dataframe.assign(
+            rhp_center_child=["N2160556114", "N2085421114"]
+        )
+        result = indexed_dataframe.rhp.rhp_to_center_child()
+
+        pd.testing.assert_frame_equal(expected, result)
+
+    def test_rhp_to_center_child_wrong_index(self, indexed_dataframe):
+        indexed_dataframe.index = [str(indexed_dataframe.index[0])] + ["invalid"]
+        result = indexed_dataframe.rhp.rhp_to_center_child()
+        expected = indexed_dataframe.assign(rhp_center_child=["N2160556114", None])
+
+        pd.testing.assert_frame_equal(expected, result)
 
 
 class TestPolyfill:

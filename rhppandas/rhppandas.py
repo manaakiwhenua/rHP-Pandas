@@ -141,6 +141,9 @@ class rHPAccessor:
 
     def rhp_to_parent(self, resolution: int = None) -> AnyDataFrame:
         """
+        Adds a column 'rhp_parent' with the parent cell at the requested resolution to the
+        dataframe.
+        ----------
         Parameters
         ----------
         resolution : int or None
@@ -152,8 +155,21 @@ class rHPAccessor:
             wrapped_partial(rhp_py.rhp_to_parent, res=resolution), column
         )
 
-    def rhp_to_center_child(self) -> AnyDataFrame:
-        pass
+    def rhp_to_center_child(self, resolution: int = None) -> AnyDataFrame:
+        """
+        Adds a column 'rhp_center_child' with the address of the central child
+        cell at the requested resolution to the dataframe.
+        ----------
+        Parameters
+        ----------
+        resolution : int or None
+            rHEALPix resolution. If none, then returns the child of resolution
+            directly below that of each rHEALPix cell
+        """
+        return self._apply_index_assign(
+            wrapped_partial(rhp_py.rhp_to_center_child, res=resolution),
+            "rhp_center_child",
+        )
 
     def polyfill(self) -> AnyDataFrame:
         pass

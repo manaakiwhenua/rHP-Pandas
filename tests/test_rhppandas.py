@@ -227,7 +227,13 @@ class TestPolyfill:
 
 
 class TestCellArea:
-    pass
+    def test_cell_area(self, indexed_dataframe):
+        expected = indexed_dataframe.assign(
+            rhp_cell_area=[0.2587977645498284, 0.2587977645498284]
+        )
+        result = indexed_dataframe.rhp.cell_area()
+
+        pd.testing.assert_frame_equal(expected, result)
 
 
 class TestGeoToRhpAggregate:

@@ -1,4 +1,4 @@
-from typing import Union, Callable, Any
+from typing import Union, Literal, Callable, Any
 
 import shapely
 import pandas as pd
@@ -174,8 +174,20 @@ class rHPAccessor:
     def polyfill(self) -> AnyDataFrame:
         pass
 
-    def cell_area(self) -> AnyDataFrame:
-        pass
+    def cell_area(self, unit: Literal["km^2", "m^2"] = "km^2") -> AnyDataFrame:
+        """
+        Adds a column 'rhp_cell_area' to the dataframe of cells addresses.
+        ----------
+        Parameters
+        ----------
+        unit : str, options: 'km^2' or 'm^2'
+            Unit for area result. Default: 'km^2`
+
+        TODO: find out the meaning of unit "rads^2" that appears in h3pandas
+        """
+        return self._apply_index_assign(
+            wrapped_partial(rhp_py.cell_area, unit=unit), "rhp_cell_area"
+        )
 
     def geo_to_rhp_aggregate(self) -> pd.DataFrame:
         pass

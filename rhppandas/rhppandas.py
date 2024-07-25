@@ -16,7 +16,7 @@ class rHPAccessor:
     """
     Shamelessly appropriated from equivalent class in h3pandas package
 
-    WIP: adapt more functions as needed
+    TODO: link to h3pandas repo
     """
 
     def __init__(self, df: pd.DataFrame) -> None:
@@ -126,7 +126,11 @@ class rHPAccessor:
         return self._apply_index_assign(rhp_py.rhp_get_base_cell, "rhp_base_cell")
 
     def rhp_is_valid(self) -> AnyDataFrame:
-        pass
+        """
+        Adds a column 'rhp_is_valid' indicating if the cell addresses are valid rHEALPix
+        addresses or not.
+        """
+        return self._apply_index_assign(rhp_py.rhp_is_valid, "rhp_is_valid")
 
     def k_ring(self) -> AnyDataFrame:
         pass

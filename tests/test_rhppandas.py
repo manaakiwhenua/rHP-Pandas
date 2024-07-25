@@ -114,9 +114,20 @@ class TestRhpToGeoBoundary:
         assert_geodataframe_equal(expected, result, check_less_precise=True)
 
     def test_rhp_to_geo_boundary_wrong_index(self, indexed_dataframe):
+        c = (
+            (13.996245382425982, 50.004590579705954),
+            (14.001695633743132, 50.004590579705954),
+            (14.005449591280690, 49.999532956048753),
+            (14.000000000000031, 49.999532956048753),
+            (13.996245382425982, 50.004590579705954),
+        )
+        geometry = [Polygon(c), Polygon()]
         indexed_dataframe.index = [str(indexed_dataframe.index[0])] + ["invalid"]
-        with pytest.raises(AssertionError):
-            indexed_dataframe.rhp.rhp_to_geo_boundary()
+        result = indexed_dataframe.rhp.rhp_to_geo_boundary()
+        expected = gpd.GeoDataFrame(
+            indexed_dataframe, geometry=geometry, crs="epsg:4326"
+        )
+        assert_geodataframe_equal(expected, result, check_less_precise=True)
 
 
 class TestRhpGetResolution:
@@ -140,7 +151,11 @@ class TestRhpGetBaseCell:
 
 
 class TestRhpIsValid:
-    pass
+    def test_rhp_is_valid(self, indexed_dataframe):
+        indexed_dataframe.index = [str(indexed_dataframe.index[0])] + ["invalid"]
+        expected = indexed_dataframe.assign(rhp_is_valid=[True, False])
+        result = indexed_dataframe.rhp.rhp_is_valid()
+        pd.testing.assert_frame_equal(expected, result)
 
 
 class TestKRing:

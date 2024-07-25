@@ -16,7 +16,7 @@ class rHPAccessor:
     """
     Shamelessly appropriated from equivalent class in h3pandas package
 
-    TODO: link to h3pandas repo
+    The h3pandas repo is found here: https://github.com/DahnJ/H3-Pandas
     """
 
     def __init__(self, df: pd.DataFrame) -> None:

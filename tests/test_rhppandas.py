@@ -38,6 +38,14 @@ def indexed_dataframe(basic_dataframe):
 
 
 @pytest.fixture
+def indexed_dataframe_centre_cells(basic_dataframe):
+    """DataFrame with lat, lng and resolution 10 rHEALPix index"""
+    return basic_dataframe.assign(rhp_10=["N2160556114", "N2085421114"]).set_index(
+        "rhp_10"
+    )
+
+
+@pytest.fixture
 def rhp_dataframe_with_values():
     """DataFrame with resolution 9 rHEALPix index and values"""
     index = ["N216055611", "N216055612", "N216055615"]
@@ -166,12 +174,80 @@ class TestRhpIsValid:
 
 
 class TestKRing:
+    def test_rhp_0_ring(self, indexed_dataframe_centre_cells):
+        expected = indexed_dataframe_centre_cells.assign(
+            rhp_k_ring=[[h] for h in indexed_dataframe_centre_cells.index]
+        )
+        result = indexed_dataframe_centre_cells.rhp.k_ring(0)
+        pd.testing.assert_frame_equal(expected, result)
+
+    def test_rhp_k_ring(self, indexed_dataframe_centre_cells):
+        expected_indices = [
+            {
+                "N2160556114",
+                "N2160556110",
+                "N2160556111",
+                "N2160556112",
+                "N2160556115",
+                "N2160556118",
+                "N2160556117",
+                "N2160556116",
+                "N2160556113",
+            },
+            {
+                "N2085421114",
+                "N2085421110",
+                "N2085421111",
+                "N2085421112",
+                "N2085421115",
+                "N2085421118",
+                "N2085421117",
+                "N2085421116",
+                "N2085421113",
+            },
+        ]
+        expected = indexed_dataframe_centre_cells.assign(rhp_k_ring=expected_indices)
+        result = indexed_dataframe_centre_cells.rhp.k_ring()
+        result["rhp_k_ring"] = result["rhp_k_ring"].apply(
+            set
+        )  # Convert to set for testing
+        pd.testing.assert_frame_equal(expected, result)
+
+    def test_rhp_k_ring_explode(self, indexed_dataframe_centre_cells):
+        expected_indices = set().union(
+            *[
+                {
+                    "N2160556114",
+                    "N2160556110",
+                    "N2160556111",
+                    "N2160556112",
+                    "N2160556115",
+                    "N2160556118",
+                    "N2160556117",
+                    "N2160556116",
+                    "N2160556113",
+                },
+                {
+                    "N2085421114",
+                    "N2085421110",
+                    "N2085421111",
+                    "N2085421112",
+                    "N2085421115",
+                    "N2085421118",
+                    "N2085421117",
+                    "N2085421116",
+                    "N2085421113",
+                },
+            ]
+        )
+        result = indexed_dataframe_centre_cells.rhp.k_ring(explode=True)
+        assert len(result) == len(indexed_dataframe_centre_cells) * 9
+        assert set(result["rhp_k_ring"]) == expected_indices
+        assert not result["lat"].isna().any()
+
+
+class TestCellRing:
     pass
-
-
-# TODO: placeholder, find out if rhp needs that test class
-# class TestHexRing:
-#    pass
 
 
 class TestRhpToParent:
@@ -249,7 +325,7 @@ class TestRhpToParentAggregate:
 #    pass
 
 # TODO: placeholder, find out if rhp needs that test class
-# class TestWeightedHexRing:
+# class TestWeightedCellRing:
 #    pass
 
 

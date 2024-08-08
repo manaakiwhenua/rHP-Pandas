@@ -79,11 +79,6 @@ class rHPAccessor:
         -------
         GeoDataFrame with Point geometry
 
-        Raises
-        ------
-        AssertionError
-            When an invalid rHEALPix address is encountered
-
         See Also
         --------
         rhp_to_geo_boundary : Adds an rHEALPix cell
@@ -132,12 +127,45 @@ class rHPAccessor:
         """
         return self._apply_index_assign(rhp_py.rhp_is_valid, "rhp_is_valid")
 
-    def k_ring(self) -> AnyDataFrame:
-        pass
+    def k_ring(self, k: int = 1, explode: bool = False) -> AnyDataFrame:
+        """
+        Parameters
+        ----------
+        k : int
+            the distance from the origin rHEALPix address. Default k = 1
+        explode : bool
+            If True, will explode the resulting list vertically.
+            All other columns' values are copied.
+            Default: False
 
-    # TODO: placeholder, find out if rhp needs that function
-    # def hex_ring(self):
-    #    pass
+        TODO: find out if rhp needs the following note (and the referenced function)
+        See Also
+        --------
+        k_ring_smoothing : Extended API method that distributes numeric values
+            to the k-ring cells
+        """
+        func = wrapped_partial(rhp_py.k_ring, k=k)
+        column_name = "rhp_k_ring"
+        if explode:
+            return self._apply_index_explode(func, column_name, list)
+        return self._apply_index_assign(func, column_name, list)
+
+    def cell_ring(self, k: int = 1, explode: bool = False) -> AnyDataFrame:
+        """
+        Adds a column 'rhp_cell_ring' of cells at distance k from the existing entries
+        to the dataframe.
+
+        explode = False will add the cell ring as a list associated with the existing
+        entry.
+
+        explode = True will add the cell ring one cell at a time (repeating existing
+        entries).
+        """
+        func = wrapped_partial(rhp_py.cell_ring, k=k)
+        column_name = "rhp_cell_ring"
+        if explode:
+            return self._apply_index_explode(func, column_name, list)
+        return self._apply_index_assign(func, column_name, list)
 
     def rhp_to_parent(self, resolution: int = None) -> AnyDataFrame:
         """
@@ -200,7 +228,7 @@ class rHPAccessor:
     #    pass
 
     # TODO: placeholder, find out if rhp needs that function
-    # def weighted_hex_ring(self):
+    # def weighted_square_ring(self):
     #    pass
 
     def polyfill_resample(self) -> AnyDataFrame:
@@ -240,8 +268,47 @@ class rHPAccessor:
 
         return finalizer(self._df.assign(**assign_args))
 
-    def _apply_index_explode(self) -> Any:
-        pass
+    def _apply_index_explode(
+        self,
+        func: Callable,
+        column_name: str,
+        processor: Callable = lambda x: x,
+        finalizer: Callable = lambda x: x,
+    ) -> Any:
+        """Helper method. Applies a list-making `func` to index and performs
+        a vertical explode.
+        Any additional values are simply copied to all the rows.
+
+        Parameters
+        ----------
+        func : Callable
+            single-argument function to be applied to each H3 address
+        column_name : str
+            name of the resulting column
+        processor : Callable
+            (Optional) further processes the result of func. Default: identity
+        finalizer : Callable
+            (Optional) further processes the resulting dataframe. Default: identity
+
+        Returns
+        -------
+        Dataframe with column `column` containing the result of `func`.
+        If using `finalizer`, can return anything the `finalizer` returns.
+        """
+        result = (
+            pd.DataFrame.from_dict(
+                {
+                    rhpaddress: processor(func(rhpaddress))
+                    for rhpaddress in self._df.index
+                },
+                orient="index",
+            )
+            .stack()
+            .to_frame(column_name)
+            .reset_index(level=1, drop=True)
+        )
+        result = self._df.join(result)
+        return finalizer(result)
 
     def _multiply_numeric(self):
         pass

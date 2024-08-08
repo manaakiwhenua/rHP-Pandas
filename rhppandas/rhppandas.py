@@ -200,7 +200,7 @@ class rHPAccessor:
         )
 
     def polyfill(self) -> AnyDataFrame:
-        pass
+        raise NotImplementedError()
 
     def cell_area(self, unit: Literal["km^2", "m^2"] = "km^2") -> AnyDataFrame:
         """
@@ -218,10 +218,10 @@ class rHPAccessor:
         )
 
     def geo_to_rhp_aggregate(self) -> pd.DataFrame:
-        pass
+        raise NotImplementedError()
 
     def rhp_to_parent_aggregate(self) -> gpd.GeoDataFrame:
-        pass
+        raise NotImplementedError()
 
     # TODO: placeholder, find out if rhp needs that function
     # def k_ring_smoothing(self) -> AnyDataFrame:
@@ -232,10 +232,10 @@ class rHPAccessor:
     #    pass
 
     def polyfill_resample(self) -> AnyDataFrame:
-        pass
+        raise NotImplementedError()
 
     def linetrace(self) -> AnyDataFrame:
-        pass
+        raise NotImplementedError()
 
     def _apply_index_assign(
         self,
@@ -311,9 +311,4 @@ class rHPAccessor:
         return finalizer(result)
 
     def _multiply_numeric(self):
-        pass
-
-    # TODO: placeholder, find out if rhp needs that function
-    # @staticmethod
-    # def _format_resolution(self):
-    #    pass
+        raise NotImplementedError()

@@ -1,7 +1,7 @@
 # rHP-Pandas
 Package `rhppandas` intends to recreate for rHEALPix what `h3pandas`, developed by Daniel Jahn (https://github.com/DahnJ/H3-Pandas), does for `h3-py`, the Python binding for Uber's H3 DGGS. It provides a bridge between package `rhealpixdggs` and the dataframes used by `pandas` and `geopandas`.
 
-[!IMPORTANT]
+> [!IMPORTANT]
 > This is very much a work in progress, and in the early stages. Some of the API available in `h3pandas` remains unimplemented, none of it has been used in production. The package comes with some tests but we make no claims of completeness regarding those.
 
 In other words: the package in its current form is mostly meant for developers, and not in a state that would be suitable for end users.
@@ -11,7 +11,7 @@ Use yaml file `environment.yml` to create a conda environment for basic use if y
 
 Adding yaml file `environment-dev.yml` to your conda environment will add the packages you need to run the automated tests.
 
-[!NOTE]
+> [!NOTE]
 > A large part of why some of the API remains unimplemented has to do with the relevant functions in the backend not being implemented yet either. Development of the wrapper API within `rhealpixdggs` is happening in tandem with `rhppandas`, with the intention of adding adapter functions one by one as the backend is fleshed out.
 
 This also explains why `environment.yml` points to a branch of the `rhealpixdggs-py` repository instead of a release of the `rhealpixdggs` package.

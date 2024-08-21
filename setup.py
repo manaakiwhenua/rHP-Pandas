@@ -11,13 +11,11 @@ with open(path.join(this_directory, "README.md"), encoding="utf-8") as f:
 setup(
     name="rhppandas",
     version=__version__,
-    # cmdclass=versioneer.get_cmdclass(),
-    # license="MIT",
-    description="Integration of rHEALPixDGGS and GeoPandas",
+    description="Integration of rHEALPixDGGS and Pandas/GeoPandas",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="MWLR",
-    # url="https://github.com/manaakiwhenua/rHP-Pandas",
+    url="https://github.com/manaakiwhenua/rHP-Pandas",
     keywords=[
         "python",
         "rHEALPix",
@@ -28,8 +26,8 @@ setup(
         "integration",
     ],
     classifiers=[
-        "Development Status :: 3 - Alpha",
-        # "License :: OSI Approved :: MIT License",
+        "Development Status :: 2 - Pre-Alpha",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: GIS",
     ],

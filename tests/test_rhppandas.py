@@ -325,13 +325,11 @@ class TestCellArea:
 
 
 class TestGeoToRhpAggregate:
-    def test_geo_to_rhp_aggregate(self, rhp_dataframe_with_values):
-        result = rhp_dataframe_with_values.rhp.geo_to_rhp_aggregate(
+    def test_geo_to_rhp_aggregate(self, basic_dataframe_with_values):
+        result = basic_dataframe_with_values.rhp.geo_to_rhp_aggregate(
             1, return_geometry=False
         )
-        expected = pd.DataFrame({"rhp_01": ["N2"], "val": [1 + 2 + 5]}).set_index(
-            "rhp_01"
-        )
+        expected = pd.DataFrame({"rhp_01": ["N2"], "val": [2 + 5]}).set_index("rhp_01")
 
         pd.testing.assert_frame_equal(expected, result)
 
@@ -343,10 +341,37 @@ class TestGeoToRhpAggregate:
 
         pd.testing.assert_frame_equal(expected, result)
 
+    def test_geo_to_rhp_aggregate_with_geometry(self, basic_dataframe_with_values):
+        result = basic_dataframe_with_values.rhp.geo_to_rhp_aggregate(1)
+        indexed = pd.DataFrame({"rhp_01": ["N2"], "val": [2 + 5]}).set_index("rhp_01")
+        geometry = [
+            Polygon(rhp_py.rhp_to_geo_boundary(h, True, False)) for h in indexed.index
+        ]
+        expected = gpd.GeoDataFrame(indexed, geometry=geometry, crs="epsg:4326")
+
+        assert_geodataframe_equal(expected, result)
+
 
 class TestRhpToParentAggregate:
-    # TODO: test with high priority
-    pass
+    def test_rhp_to_parent_aggregate(self, rhp_geodataframe_with_values):
+        result = rhp_geodataframe_with_values.rhp.rhp_to_parent_aggregate(8)
+
+        index = pd.Index(["N21605561"], name="rhp_08")
+        geometry = [Polygon(rhp_py.rhp_to_geo_boundary(h, True, False)) for h in index]
+        expected = gpd.GeoDataFrame(
+            {"val": [1 + 2 + 5]}, geometry=geometry, index=index, crs="epsg:4326"
+        )
+
+        assert_geodataframe_equal(expected, result)
+
+    def test_rhp_to_parent_aggregate_no_geometry(self, rhp_dataframe_with_values):
+        result = rhp_dataframe_with_values.rhp.rhp_to_parent_aggregate(
+            8, return_geometry=False
+        )
+        index = pd.Index(["N21605561"], name="rhp_08")
+        expected = pd.DataFrame({"val": [1 + 2 + 5]}, index=index)
+
+        pd.testing.assert_frame_equal(expected, result)
 
 
 # TODO: placeholder, find out if rhp needs that test class

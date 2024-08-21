@@ -242,7 +242,7 @@ class rHPAccessor:
         lng_col : str
             Name of the longitude column (if used), default 'lng'
         return_geometry: bool
-            (Optional) Whether to add a `geometry` column with the hexagonal cells.
+            (Optional) Whether to add a `geometry` column with the square cells.
             Default = True
 
         Returns
@@ -254,18 +254,61 @@ class rHPAccessor:
         geo_to_rhp : rHEALPix API method upon which this function builds
 
         """
-        colname = f"rhp_{resolution:02}"
+        colname = f"rhp_{resolution:02}" if resolution is not None else "rhp_parent"
         grouped = pd.DataFrame(
             self.geo_to_rhp(resolution, lat_col, lng_col, False)
             .drop(columns=[lat_col, lng_col, "geometry"], errors="ignore")
             .groupby(colname)
             .agg(operation)
         )
+
         return grouped.rhp.rhp_to_geo_boundary() if return_geometry else grouped
 
-    def rhp_to_parent_aggregate(self) -> gpd.GeoDataFrame:
-        # TODO: this can be implemented using existing functions now
-        raise NotImplementedError()
+    def rhp_to_parent_aggregate(
+        self,
+        resolution: int,
+        operation: Union[dict, str, Callable] = "sum",
+        return_geometry: bool = True,
+    ) -> gpd.GeoDataFrame:
+        """Assigns parent cell to each row, groups by it and performs `operation`.
+        Assumes rHEALPix index.
+
+        Parameters
+        ----------
+        resolution : int
+            rHEALPix resolution
+        operation : Union[dict, str, Callable]
+            Argument passed to DataFrame's `agg` method, default 'sum'
+        return_geometry: bool
+            (Optional) Whether to add a `geometry` column with the square cells.
+            Default = True
+
+        Returns
+        -------
+        (Geo)DataFrame aggregated by the parent of each rHEALPix address
+
+        See Also
+        --------
+        rhp_to_parent : rHEALPix API method upon which this function builds
+
+        """
+        parent_rhpaddresses = [
+            rhp_py.rhp_to_parent(rhpaddress, resolution)
+            for rhpaddress in self._df.index
+        ]
+        rhp_parent_column = (
+            f"rhp_{resolution:02}" if resolution is not None else "rhp_parent"
+        )
+        kwargs_assign = {rhp_parent_column: parent_rhpaddresses}
+        grouped = (
+            self._df.assign(**kwargs_assign)
+            .groupby(rhp_parent_column)[
+                [c for c in self._df.columns if c != "geometry"]
+            ]
+            .agg(operation)
+        )
+
+        return grouped.rhp.rhp_to_geo_boundary() if return_geometry else grouped
 
     # TODO: placeholder, find out if rhp needs that function
     # def k_ring_smoothing(self) -> AnyDataFrame:

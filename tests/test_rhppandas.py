@@ -17,10 +17,22 @@ def basic_dataframe():
 
 
 @pytest.fixture
+def basic_dataframe_with_values(basic_dataframe):
+    """DataFrame with lat and lng columns and values"""
+    return basic_dataframe.assign(val=[2, 5])
+
+
+@pytest.fixture
 def basic_geodataframe(basic_dataframe):
     """GeoDataFrame with POINT geometry"""
     geometry = gpd.points_from_xy(basic_dataframe["lng"], basic_dataframe["lat"])
     return gpd.GeoDataFrame(geometry=geometry, crs="epsg:4326")
+
+
+@pytest.fixture
+def basic_geodataframe_with_values(basic_geodataframe):
+    """GeoDataFrame with POINT geometry and values"""
+    return basic_geodataframe.assign(val=[2, 5])
 
 
 @pytest.fixture
@@ -313,10 +325,27 @@ class TestCellArea:
 
 
 class TestGeoToRhpAggregate:
-    pass
+    def test_geo_to_rhp_aggregate(self, rhp_dataframe_with_values):
+        result = rhp_dataframe_with_values.rhp.geo_to_rhp_aggregate(
+            1, return_geometry=False
+        )
+        expected = pd.DataFrame({"rhp_01": ["N2"], "val": [1 + 2 + 5]}).set_index(
+            "rhp_01"
+        )
+
+        pd.testing.assert_frame_equal(expected, result)
+
+    def test_geo_to_rhp_aggregate_geo(self, basic_geodataframe_with_values):
+        result = basic_geodataframe_with_values.rhp.geo_to_rhp_aggregate(
+            1, return_geometry=False
+        )
+        expected = pd.DataFrame({"rhp_01": ["N2"], "val": [2 + 5]}).set_index("rhp_01")
+
+        pd.testing.assert_frame_equal(expected, result)
 
 
 class TestRhpToParentAggregate:
+    # TODO: test with high priority
     pass
 
 

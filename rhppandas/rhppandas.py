@@ -217,10 +217,54 @@ class rHPAccessor:
             wrapped_partial(rhp_py.cell_area, unit=unit), "rhp_cell_area"
         )
 
-    def geo_to_rhp_aggregate(self) -> pd.DataFrame:
-        raise NotImplementedError()
+    def geo_to_rhp_aggregate(
+        self,
+        resolution: int,
+        operation: Union[dict, str, Callable] = "sum",
+        lat_col: str = "lat",
+        lng_col: str = "lng",
+        return_geometry: bool = True,
+    ) -> pd.DataFrame:
+        """Adds rHEALPix index to DataFrame, groups points with the same index
+        and performs `operation`.
+
+        pd.DataFrame: uses `lat_col` and `lng_col` (default `lat` and `lng`)
+        gpd.GeoDataFrame: uses `geometry`
+
+        Parameters
+        ----------
+        resolution : int
+            rHEALPix resolution
+        operation : Union[dict, str, Callable]
+            Argument passed to DataFrame's `agg` method, default 'sum'
+        lat_col : str
+            Name of the latitude column (if used), default 'lat'
+        lng_col : str
+            Name of the longitude column (if used), default 'lng'
+        return_geometry: bool
+            (Optional) Whether to add a `geometry` column with the hexagonal cells.
+            Default = True
+
+        Returns
+        -------
+        (Geo)DataFrame aggregated by rHEALPix address into which each row's point falls
+
+        See Also
+        --------
+        geo_to_rhp : rHEALPix API method upon which this function builds
+
+        """
+        colname = f"rhp_{resolution:02}"
+        grouped = pd.DataFrame(
+            self.geo_to_rhp(resolution, lat_col, lng_col, False)
+            .drop(columns=[lat_col, lng_col, "geometry"], errors="ignore")
+            .groupby(colname)
+            .agg(operation)
+        )
+        return grouped.rhp.rhp_to_geo_boundary() if return_geometry else grouped
 
     def rhp_to_parent_aggregate(self) -> gpd.GeoDataFrame:
+        # TODO: this can be implemented using existing functions now
         raise NotImplementedError()
 
     # TODO: placeholder, find out if rhp needs that function

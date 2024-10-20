@@ -1,4 +1,5 @@
 from typing import Union, Literal, Callable, Any
+from warnings import warn
 
 import shapely
 import pandas as pd
@@ -127,7 +128,7 @@ class rHPAccessor:
         """
         return self._apply_index_assign(rhp_py.rhp_is_valid, "rhp_is_valid")
 
-    def k_ring(self, k: int = 1, explode: bool = False) -> AnyDataFrame:
+    def k_ring(self, k: int = 1, explode: bool = False, verbose=True) -> AnyDataFrame:
         """
         Parameters
         ----------
@@ -144,13 +145,18 @@ class rHPAccessor:
         k_ring_smoothing : Extended API method that distributes numeric values
             to the k-ring cells
         """
-        func = wrapped_partial(rhp_py.k_ring, k=k)
+        if verbose:
+            warn(str.format(rhp_py.CELL_RING_WARNING, "k"))
+
+        func = wrapped_partial(rhp_py.k_ring, k=k, verbose=False)
         column_name = "rhp_k_ring"
         if explode:
             return self._apply_index_explode(func, column_name, list)
         return self._apply_index_assign(func, column_name, list)
 
-    def cell_ring(self, k: int = 1, explode: bool = False) -> AnyDataFrame:
+    def cell_ring(
+        self, k: int = 1, explode: bool = False, verbose: bool = True
+    ) -> AnyDataFrame:
         """
         Adds a column 'rhp_cell_ring' of cells at distance k from the existing entries
         to the dataframe.
@@ -161,7 +167,10 @@ class rHPAccessor:
         explode = True will add the cell ring one cell at a time (repeating existing
         entries).
         """
-        func = wrapped_partial(rhp_py.cell_ring, k=k)
+        if verbose:
+            warn(str.format(rhp_py.CELL_RING_WARNING, "cell"))
+
+        func = wrapped_partial(rhp_py.cell_ring, k=k, verbose=False)
         column_name = "rhp_cell_ring"
         if explode:
             return self._apply_index_explode(func, column_name, list)

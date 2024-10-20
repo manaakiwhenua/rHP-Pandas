@@ -8,6 +8,9 @@ from shapely.geometry import box, Polygon
 from rhppandas import rhppandas
 from rhealpixdggs import rhp_wrappers as rhp_py
 
+pd.option_context("display.float_format", "{:0.15f}".format)
+pd.set_option("display.precision", 15)
+
 
 # Fixtures
 @pytest.fixture
@@ -81,7 +84,7 @@ class TestGeoToRhp:
     def test_geo_to_rhp(self, basic_dataframe):
         result = basic_dataframe.rhp.geo_to_rhp(9)
         expected = basic_dataframe.assign(
-            rhp_09=["N216055611", "N208542111"]
+            rhp_09=["N216055147", "N208518546"]
         ).set_index("rhp_09")
 
         pd.testing.assert_frame_equal(expected, result)
@@ -89,7 +92,7 @@ class TestGeoToRhp:
     def test_geo_to_rhp_geo(self, basic_geodataframe):
         result = basic_geodataframe.rhp.geo_to_rhp(9)
         expected = basic_geodataframe.assign(
-            rhp_09=["N216055611", "N208542111"]
+            rhp_09=["N216055147", "N208518546"]
         ).set_index("rhp_09")
 
         pd.testing.assert_frame_equal(expected, result)
@@ -101,8 +104,8 @@ class TestGeoToRhp:
 
 class TestRhpToGeo:
     def test_rhp_to_geo(self, indexed_dataframe):
-        lats = [50.00206177482531, 51.00185487171624]
-        lngs = [14.000847727642356, 14.998138688394192]
+        lats = [50.06543285982062, 51.06479381112059]
+        lngs = [14.000847727642311, 14.998138688394175]
         geometry = gpd.points_from_xy(x=lngs, y=lats, crs="epsg:4326")
         expected = gpd.GeoDataFrame(indexed_dataframe, geometry=geometry)
         result = indexed_dataframe.rhp.rhp_to_geo()
@@ -113,18 +116,18 @@ class TestRhpToGeo:
 class TestRhpToGeoBoundary:
     def test_rhp_to_geo_boundary(self, indexed_dataframe):
         c1 = (
-            (13.996245382425982, 50.004590579705954),
-            (14.001695633743132, 50.004590579705954),
-            (14.005449591280690, 49.999532956048753),
-            (14.000000000000031, 49.999532956048753),
-            (13.996245382425982, 50.004590579705954),
+            (13.996245382425958, 50.067960668809754),
+            (14.0016956337431, 50.067960668809754),
+            (14.00544959128063, 50.062905036612165),
+            (13.999999999999975, 50.062905036612165),
+            (13.996245382425958, 50.067960668809754),
         )
         c2 = (
-            (14.993485139914398, 51.004375558275498),
-            (14.999069305702077, 51.004375558275498),
-            (15.002791736460116, 50.999334171715851),
-            (14.997208263539958, 50.999334171715851),
-            (14.993485139914398, 51.004375558275498),
+            (14.993485139914386, 51.06731331121636),
+            (14.999069305702065, 51.06731331121636),
+            (15.002791736460077, 51.06227429726551),
+            (14.997208263539921, 51.06227429726551),
+            (14.993485139914386, 51.06731331121636),
         )
         geometry = [Polygon(c1), Polygon(c2)]
 
@@ -137,11 +140,11 @@ class TestRhpToGeoBoundary:
 
     def test_rhp_to_geo_boundary_wrong_index(self, indexed_dataframe):
         c = (
-            (13.996245382425982, 50.004590579705954),
-            (14.001695633743132, 50.004590579705954),
-            (14.005449591280690, 49.999532956048753),
-            (14.000000000000031, 49.999532956048753),
-            (13.996245382425982, 50.004590579705954),
+            (13.996245382425958, 50.067960668809754),
+            (14.0016956337431, 50.067960668809754),
+            (14.00544959128063, 50.062905036612165),
+            (13.999999999999975, 50.062905036612165),
+            (13.996245382425958, 50.067960668809754),
         )
         geometry = [Polygon(c), Polygon()]
         indexed_dataframe.index = [str(indexed_dataframe.index[0])] + ["invalid"]
@@ -190,7 +193,7 @@ class TestKRing:
         expected = indexed_dataframe_centre_cells.assign(
             rhp_k_ring=[[h] for h in indexed_dataframe_centre_cells.index]
         )
-        result = indexed_dataframe_centre_cells.rhp.k_ring(0)
+        result = indexed_dataframe_centre_cells.rhp.k_ring(0, verbose=False)
         pd.testing.assert_frame_equal(expected, result)
 
     def test_rhp_k_ring(self, indexed_dataframe_centre_cells):
@@ -219,7 +222,7 @@ class TestKRing:
             },
         ]
         expected = indexed_dataframe_centre_cells.assign(rhp_k_ring=expected_indices)
-        result = indexed_dataframe_centre_cells.rhp.k_ring()
+        result = indexed_dataframe_centre_cells.rhp.k_ring(verbose=False)
         result["rhp_k_ring"] = result["rhp_k_ring"].apply(
             set
         )  # Convert to set for testing
@@ -252,7 +255,7 @@ class TestKRing:
                 },
             ]
         )
-        result = indexed_dataframe_centre_cells.rhp.k_ring(explode=True)
+        result = indexed_dataframe_centre_cells.rhp.k_ring(explode=True, verbose=False)
         assert len(result) == len(indexed_dataframe_centre_cells) * 9
         assert set(result["rhp_k_ring"]) == expected_indices
         assert not result["lat"].isna().any()
@@ -317,7 +320,7 @@ class TestPolyfill:
 class TestCellArea:
     def test_cell_area(self, indexed_dataframe):
         expected = indexed_dataframe.assign(
-            rhp_cell_area=[0.2587977645498284, 0.2587977645498284]
+            rhp_cell_area=[0.258507625363534, 0.258507625363534]
         )
         result = indexed_dataframe.rhp.cell_area()
 

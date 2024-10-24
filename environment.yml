@@ -7,5 +7,6 @@ dependencies:
   - pandas
   - geopandas>=0.9.*
   - pip
-  # Use pip to install rhp from dev branch of git repo
+  - pip:
+    # Use pip to install rhp from dev branch of git repo
     - git+https://github.com/manaakiwhenua/rhealpixdggs-py.git@demaion/raster2dggs

@@ -9,4 +9,4 @@ dependencies:
   - pip
   - pip:
     # Use pip to install rhp from dev branch of git repo
-    - git+https://github.com/manaakiwhenua/rhealpixdggs-py.git@demaion/raster2dggs
+    - git+https://github.com/manaakiwhenua/rhealpixdggs-py.git@demaion/polyfill

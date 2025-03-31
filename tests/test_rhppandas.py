@@ -40,8 +40,16 @@ def basic_geodataframe_with_values(basic_geodataframe):
 
 @pytest.fixture
 def basic_geodataframe_polygon():
+    """GeoDataFrame with POLYGON geometry"""
     geom = box(0, 0, 1, 1)
     return gpd.GeoDataFrame(geometry=[geom], crs="epsg:4326")
+
+
+@pytest.fixture
+def basic_geodataframe_polygons():
+    """GeoDataFrame with POLYGON geometries"""
+    geoms = [box(14, 50, 15, 51), box(14, 50, 15, 52)]
+    return gpd.GeoDataFrame(geometry=geoms, crs="epsg:4326")
 
 
 @pytest.fixture
@@ -404,17 +412,14 @@ class TestPolyfill:
         assert set(result["rhp_polyfill"]) == expected_indices
         assert not result["val"].isna().any()
 
-    # def test_polyfill_explode_unequal_lengths(self, basic_geodataframe_polygons):
-    #     expected_indices = {
-    #         "83754efffffffff",
-    #         "83756afffffffff",
-    #         "83754efffffffff",
-    #         "837541fffffffff",
-    #         "83754cfffffffff",
-    #     }
-    #     result = basic_geodataframe_polygons.rhp.polyfill(3, explode=True)
-    #     assert len(result) == 5
-    #     assert set(result["rhp_polyfill"]) == expected_indices
+    def test_polyfill_explode_unequal_lengths(self, basic_geodataframe_polygons):
+        expected_indices = {
+            "N2085",
+            "N2160",
+        }
+        result = basic_geodataframe_polygons.rhp.polyfill(4, explode=True)
+        assert len(result) == 3
+        assert set(result["rhp_polyfill"]) == expected_indices
 
 
 class TestCellArea:

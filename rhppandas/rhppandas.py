@@ -18,6 +18,9 @@ class rHPAccessor:
     Shamelessly appropriated from equivalent class in h3pandas package
 
     The h3pandas repo is found here: https://github.com/DahnJ/H3-Pandas
+
+    TODO: - Support both plane and sphere (currently hardwired to sphere)
+          - Support user defined instance of underlying dggs (currently hardwired to WGS84_003)
     """
 
     def __init__(self, df: pd.DataFrame) -> None:
@@ -128,7 +131,9 @@ class rHPAccessor:
         """
         return self._apply_index_assign(rhp_py.rhp_is_valid, "rhp_is_valid")
 
-    def k_ring(self, k: int = 1, explode: bool = False, verbose=True) -> AnyDataFrame:
+    def k_ring(
+        self, k: int = 1, explode: bool = False, verbose: bool = True
+    ) -> AnyDataFrame:
         """
         Parameters
         ----------
@@ -194,22 +199,66 @@ class rHPAccessor:
 
     def rhp_to_center_child(self, resolution: int = None) -> AnyDataFrame:
         """
-        Adds a column 'rhp_center_child' with the address of the central child
-        cell at the requested resolution to the dataframe.
+        Adds a column 'rhp_center_child' with the address of the central child cell at the
+        requested resolution to the dataframe.
         ----------
         Parameters
         ----------
         resolution : int or None
-            rHEALPix resolution. If none, then returns the child of resolution
-            directly below that of each rHEALPix cell
+            rHEALPix resolution. If none, then returns the child of resolution directly
+            below that of each rHEALPix cell
         """
         return self._apply_index_assign(
             wrapped_partial(rhp_py.rhp_to_center_child, res=resolution),
             "rhp_center_child",
         )
 
-    def polyfill(self) -> AnyDataFrame:
-        raise NotImplementedError()
+    def polyfill(
+        self,
+        resolution: int,
+        explode: bool = False,
+        compress: bool = False,
+        verbose: bool = True,
+    ) -> AnyDataFrame:
+        """
+        Adds a column 'rhp_polyfill' listing the cells where the cell centroid is
+        contained within the input (multi)polygon geometry.
+        Relies on the dataframe having a 'geometry' column with shapely Polygon or
+        MultiPolygon entries.
+        ----------
+        Parameters
+        ----------
+        resolution : int
+            rHEALPix resolution
+        explode : bool
+            If True, will explode the resulting list vertically.
+            All other columns' values are copied.
+            Default: False
+        compress : bool
+            If True, will group cells making up a parent cell and use the address of the
+            parent cell instead of the individual child addresses.
+            Default: False
+        """
+
+        # Need to wrap polyfill for each dataframe row so we can call it with geometry
+        def func(row):
+            if not "geometry" in row.keys():
+                return None
+            else:
+                return rhp_py.polyfill(
+                    row.geometry, resolution, False, compress, verbose
+                )
+
+        # Polyfill cell sets for each row
+        result = self._df.apply(func, axis=1)
+
+        if not explode:
+            assign_args = {"rhp_polyfill": result}
+            return self._df.assign(**assign_args)
+
+        result = result.explode().to_frame("rhp_polyfill")
+
+        return self._df.join(result)
 
     def cell_area(self, unit: Literal["km^2", "m^2"] = "km^2") -> AnyDataFrame:
         """
@@ -318,14 +367,6 @@ class rHPAccessor:
         )
 
         return grouped.rhp.rhp_to_geo_boundary() if return_geometry else grouped
-
-    # TODO: placeholder, find out if rhp needs that function
-    # def k_ring_smoothing(self) -> AnyDataFrame:
-    #    pass
-
-    # TODO: placeholder, find out if rhp needs that function
-    # def weighted_square_ring(self):
-    #    pass
 
     def polyfill_resample(self) -> AnyDataFrame:
         raise NotImplementedError()

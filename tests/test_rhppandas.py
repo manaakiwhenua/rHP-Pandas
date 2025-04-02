@@ -40,8 +40,16 @@ def basic_geodataframe_with_values(basic_geodataframe):
 
 @pytest.fixture
 def basic_geodataframe_polygon():
+    """GeoDataFrame with POLYGON geometry"""
     geom = box(0, 0, 1, 1)
     return gpd.GeoDataFrame(geometry=[geom], crs="epsg:4326")
+
+
+@pytest.fixture
+def basic_geodataframe_polygons():
+    """GeoDataFrame with POLYGON geometries"""
+    geoms = [box(14, 50, 15, 51), box(14, 50, 15, 52)]
+    return gpd.GeoDataFrame(geometry=geoms, crs="epsg:4326")
 
 
 @pytest.fixture
@@ -71,7 +79,7 @@ def rhp_dataframe_with_values():
 def rhp_geodataframe_with_values(rhp_dataframe_with_values):
     """GeoDataFrame with resolution 9 rHEALPix index, values, and cell geometries"""
     geometry = [
-        Polygon(rhp_py.rhp_to_geo_boundary(h, True))
+        Polygon(rhp_py.rhp_to_geo_boundary(h, True, False))
         for h in rhp_dataframe_with_values.index
     ]
     return gpd.GeoDataFrame(
@@ -314,7 +322,104 @@ class TestRhpToCenterChild:
 
 
 class TestPolyfill:
-    pass
+    def test_empty_polyfill(self, rhp_geodataframe_with_values):
+        expected = rhp_geodataframe_with_values.assign(
+            rhp_polyfill=[set(), set(), set()]
+        )
+        result = rhp_geodataframe_with_values.rhp.polyfill(1)
+        assert_geodataframe_equal(expected, result)
+
+    def test_polyfill(self, rhp_geodataframe_with_values):
+        expected_cells = [
+            {
+                "N2160556110",
+                "N2160556111",
+                "N2160556112",
+                "N2160556113",
+                "N2160556114",
+                "N2160556115",
+                "N2160556116",
+                "N2160556117",
+                "N2160556118",
+            },
+            {
+                "N2160556120",
+                "N2160556121",
+                "N2160556122",
+                "N2160556123",
+                "N2160556124",
+                "N2160556125",
+                "N2160556126",
+                "N2160556127",
+                "N2160556128",
+            },
+            {
+                "N2160556150",
+                "N2160556151",
+                "N2160556152",
+                "N2160556153",
+                "N2160556154",
+                "N2160556155",
+                "N2160556156",
+                "N2160556157",
+                "N2160556158",
+            },
+        ]
+        expected = rhp_geodataframe_with_values.assign(rhp_polyfill=expected_cells)
+        result = rhp_geodataframe_with_values.rhp.polyfill(10)
+        assert_geodataframe_equal(expected, result)
+
+    def test_polyfill_explode(self, rhp_geodataframe_with_values):
+        expected_indices = set().union(
+            *[
+                [
+                    "N2160556110",
+                    "N2160556111",
+                    "N2160556112",
+                    "N2160556113",
+                    "N2160556114",
+                    "N2160556115",
+                    "N2160556116",
+                    "N2160556117",
+                    "N2160556118",
+                ],
+                [
+                    "N2160556120",
+                    "N2160556121",
+                    "N2160556122",
+                    "N2160556123",
+                    "N2160556124",
+                    "N2160556125",
+                    "N2160556126",
+                    "N2160556127",
+                    "N2160556128",
+                ],
+                [
+                    "N2160556150",
+                    "N2160556151",
+                    "N2160556152",
+                    "N2160556153",
+                    "N2160556154",
+                    "N2160556155",
+                    "N2160556156",
+                    "N2160556157",
+                    "N2160556158",
+                ],
+            ]
+        )
+        result = rhp_geodataframe_with_values.rhp.polyfill(10, explode=True)
+        assert len(result) == len(rhp_geodataframe_with_values) * 9
+        assert set(result["rhp_polyfill"]) == expected_indices
+        assert not result["val"].isna().any()
+
+    def test_polyfill_explode_unequal_lengths(self, basic_geodataframe_polygons):
+        expected_indices = {
+            "N2085",
+            "N2160",
+        }
+        result = basic_geodataframe_polygons.rhp.polyfill(4, explode=True)
+        assert len(result) == 3
+        assert set(result["rhp_polyfill"]) == expected_indices
 
 
 class TestCellArea:
@@ -375,15 +480,6 @@ class TestRhpToParentAggregate:
         expected = pd.DataFrame({"val": [1 + 2 + 5]}, index=index)
 
         pd.testing.assert_frame_equal(expected, result)
-
-
-# TODO: placeholder, find out if rhp needs that test class
-# class TestKRingSmoothing:
-#    pass
-
-# TODO: placeholder, find out if rhp needs that test class
-# class TestWeightedCellRing:
-#    pass
 
 
 class TestPolyfillResample:

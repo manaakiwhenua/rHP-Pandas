@@ -2,10 +2,12 @@ import pytest
 
 import pandas as pd
 import geopandas as gpd
+
 from geopandas.testing import assert_geodataframe_equal
 from shapely.geometry import box, Polygon
 
 from rhppandas import rhppandas
+from rhppandas.util.const import *
 from rhealpixdggs import rhp_wrappers as rhp_py
 
 pd.option_context("display.float_format", "{:0.15f}".format)
@@ -56,7 +58,7 @@ def basic_geodataframe_polygons():
 def indexed_dataframe(basic_dataframe):
     """DataFrame with lat, lng and resolution 9 rHEALPix index"""
     return basic_dataframe.assign(rhp_09=["N216055611", "N208542111"]).set_index(
-        "rhp_09"
+        f"{COLUMNS['prefix']}09"
     )
 
 
@@ -64,7 +66,7 @@ def indexed_dataframe(basic_dataframe):
 def indexed_dataframe_centre_cells(basic_dataframe):
     """DataFrame with lat, lng and resolution 10 rHEALPix index"""
     return basic_dataframe.assign(rhp_10=["N2160556114", "N2085421114"]).set_index(
-        "rhp_10"
+        f"{COLUMNS['prefix']}10"
     )
 
 
@@ -93,7 +95,7 @@ class TestGeoToRhp:
         result = basic_dataframe.rhp.geo_to_rhp(9)
         expected = basic_dataframe.assign(
             rhp_09=["N216055147", "N208518546"]
-        ).set_index("rhp_09")
+        ).set_index(f"{COLUMNS['prefix']}09")
 
         pd.testing.assert_frame_equal(expected, result)
 
@@ -101,7 +103,7 @@ class TestGeoToRhp:
         result = basic_geodataframe.rhp.geo_to_rhp(9)
         expected = basic_geodataframe.assign(
             rhp_09=["N216055147", "N208518546"]
-        ).set_index("rhp_09")
+        ).set_index(f"{COLUMNS['prefix']}09")
 
         pd.testing.assert_frame_equal(expected, result)
 
@@ -231,7 +233,7 @@ class TestKRing:
         ]
         expected = indexed_dataframe_centre_cells.assign(rhp_k_ring=expected_indices)
         result = indexed_dataframe_centre_cells.rhp.k_ring(verbose=False)
-        result["rhp_k_ring"] = result["rhp_k_ring"].apply(
+        result[COLUMNS["k_ring"]] = result[COLUMNS["k_ring"]].apply(
             set
         )  # Convert to set for testing
         pd.testing.assert_frame_equal(expected, result)
@@ -265,7 +267,7 @@ class TestKRing:
         )
         result = indexed_dataframe_centre_cells.rhp.k_ring(explode=True, verbose=False)
         assert len(result) == len(indexed_dataframe_centre_cells) * 9
-        assert set(result["rhp_k_ring"]) == expected_indices
+        assert set(result[COLUMNS["k_ring"]]) == expected_indices
         assert not result["lat"].isna().any()
 
 
@@ -409,7 +411,7 @@ class TestPolyfill:
         )
         result = rhp_geodataframe_with_values.rhp.polyfill(10, explode=True)
         assert len(result) == len(rhp_geodataframe_with_values) * 9
-        assert set(result["rhp_polyfill"]) == expected_indices
+        assert set(result[COLUMNS["polyfill"]]) == expected_indices
         assert not result["val"].isna().any()
 
     def test_polyfill_explode_unequal_lengths(self, basic_geodataframe_polygons):
@@ -419,7 +421,7 @@ class TestPolyfill:
         }
         result = basic_geodataframe_polygons.rhp.polyfill(4, explode=True)
         assert len(result) == 3
-        assert set(result["rhp_polyfill"]) == expected_indices
+        assert set(result[COLUMNS["polyfill"]]) == expected_indices
 
 
 class TestCellArea:
@@ -432,12 +434,19 @@ class TestCellArea:
         pd.testing.assert_frame_equal(expected, result)
 
 
+class TestLinetrace:
+    pass
+
+
+# Tests: Aggregate functions
 class TestGeoToRhpAggregate:
     def test_geo_to_rhp_aggregate(self, basic_dataframe_with_values):
         result = basic_dataframe_with_values.rhp.geo_to_rhp_aggregate(
             1, return_geometry=False
         )
-        expected = pd.DataFrame({"rhp_01": ["N2"], "val": [2 + 5]}).set_index("rhp_01")
+        expected = pd.DataFrame(
+            {f"{COLUMNS['prefix']}01": ["N2"], "val": [2 + 5]}
+        ).set_index(f"{COLUMNS['prefix']}01")
 
         pd.testing.assert_frame_equal(expected, result)
 
@@ -445,13 +454,17 @@ class TestGeoToRhpAggregate:
         result = basic_geodataframe_with_values.rhp.geo_to_rhp_aggregate(
             1, return_geometry=False
         )
-        expected = pd.DataFrame({"rhp_01": ["N2"], "val": [2 + 5]}).set_index("rhp_01")
+        expected = pd.DataFrame(
+            {f"{COLUMNS['prefix']}01": ["N2"], "val": [2 + 5]}
+        ).set_index(f"{COLUMNS['prefix']}01")
 
         pd.testing.assert_frame_equal(expected, result)
 
     def test_geo_to_rhp_aggregate_with_geometry(self, basic_dataframe_with_values):
         result = basic_dataframe_with_values.rhp.geo_to_rhp_aggregate(1)
-        indexed = pd.DataFrame({"rhp_01": ["N2"], "val": [2 + 5]}).set_index("rhp_01")
+        indexed = pd.DataFrame(
+            {f"{COLUMNS['prefix']}01": ["N2"], "val": [2 + 5]}
+        ).set_index(f"{COLUMNS['prefix']}01")
         geometry = [
             Polygon(rhp_py.rhp_to_geo_boundary(h, True, False)) for h in indexed.index
         ]
@@ -464,7 +477,7 @@ class TestRhpToParentAggregate:
     def test_rhp_to_parent_aggregate(self, rhp_geodataframe_with_values):
         result = rhp_geodataframe_with_values.rhp.rhp_to_parent_aggregate(8)
 
-        index = pd.Index(["N21605561"], name="rhp_08")
+        index = pd.Index(["N21605561"], name=f"{COLUMNS['prefix']}08")
         geometry = [Polygon(rhp_py.rhp_to_geo_boundary(h, True, False)) for h in index]
         expected = gpd.GeoDataFrame(
             {"val": [1 + 2 + 5]}, geometry=geometry, index=index, crs="epsg:4326"
@@ -476,15 +489,63 @@ class TestRhpToParentAggregate:
         result = rhp_dataframe_with_values.rhp.rhp_to_parent_aggregate(
             8, return_geometry=False
         )
-        index = pd.Index(["N21605561"], name="rhp_08")
+        index = pd.Index(["N21605561"], name=f"{COLUMNS['prefix']}08")
         expected = pd.DataFrame({"val": [1 + 2 + 5]}, index=index)
 
         pd.testing.assert_frame_equal(expected, result)
 
 
 class TestPolyfillResample:
-    pass
+    def test_polyfill_resample(self, rhp_geodataframe_with_values):
+        expected_indices = set().union(
+            *[
+                [
+                    "N2160556110",
+                    "N2160556111",
+                    "N2160556112",
+                    "N2160556113",
+                    "N2160556114",
+                    "N2160556115",
+                    "N2160556116",
+                    "N2160556117",
+                    "N2160556118",
+                ],
+                [
+                    "N2160556120",
+                    "N2160556121",
+                    "N2160556122",
+                    "N2160556123",
+                    "N2160556124",
+                    "N2160556125",
+                    "N2160556126",
+                    "N2160556127",
+                    "N2160556128",
+                ],
+                [
+                    "N2160556150",
+                    "N2160556151",
+                    "N2160556152",
+                    "N2160556153",
+                    "N2160556154",
+                    "N2160556155",
+                    "N2160556156",
+                    "N2160556157",
+                    "N2160556158",
+                ],
+            ]
+        )
+        expected_values = set([1, 2, 5])
+        result = rhp_geodataframe_with_values.rhp.polyfill_resample(
+            10, return_geometry=False
+        )
+        assert len(result) == len(rhp_geodataframe_with_values) * 9
+        assert set(result.index) == expected_indices
+        assert set(result["val"]) == expected_values
+        assert not result["val"].isna().any()
 
+    def test_polyfill_resample_uncovered_rows(self, basic_geodataframe_polygons):
+        basic_geodataframe_polygons.iloc[1] = box(0, 0, 3, 3)
+        with pytest.warns(UserWarning):
+            result = basic_geodataframe_polygons.rhp.polyfill_resample(2)
 
-class TestLinetrace:
-    pass
+        assert len(result) == 2

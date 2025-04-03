@@ -7,6 +7,7 @@ import geopandas as gpd
 
 import rhealpixdggs.rhp_wrappers as rhp_py
 
+from .util.const import *
 from .util.functools import wrapped_partial
 
 AnyDataFrame = Union[pd.DataFrame, gpd.GeoDataFrame]
@@ -26,6 +27,7 @@ class rHPAccessor:
     def __init__(self, df: pd.DataFrame) -> None:
         self._df = df
 
+    # RHP wrapper API
     def geo_to_rhp(
         self,
         resolution: int,
@@ -68,7 +70,7 @@ class rHPAccessor:
         ]
 
         # Add results to DataFrame
-        colname = f"rhp_{resolution:02}"
+        colname = f"{COLUMNS['prefix']}{resolution:02}"
         assign_arg = {colname: rhpaddresses}
         df = self._df.assign(**assign_arg)
         if set_index:
@@ -89,7 +91,7 @@ class rHPAccessor:
         """
         return self._apply_index_assign(
             wrapped_partial(rhp_py.rhp_to_geo, geo_json=True, plane=False),
-            "geometry",
+            COLUMNS["geometry"],
             lambda x: shapely.geometry.Point(x),
             lambda x: gpd.GeoDataFrame(
                 x, crs="epsg:4326"
@@ -105,7 +107,7 @@ class rHPAccessor:
         """
         return self._apply_index_assign(
             wrapped_partial(rhp_py.rhp_to_geo_boundary, geo_json=True, plane=False),
-            "geometry",
+            COLUMNS["geometry"],
             lambda x: shapely.geometry.Polygon(x),
             lambda x: gpd.GeoDataFrame(
                 x, crs="epsg:4326"
@@ -116,20 +118,22 @@ class rHPAccessor:
         """
         Adds a column 'rhp_resolution' with the resolution of each cell to the dataframe.
         """
-        return self._apply_index_assign(rhp_py.rhp_get_resolution, "rhp_resolution")
+        return self._apply_index_assign(
+            rhp_py.rhp_get_resolution, COLUMNS["resolution"]
+        )
 
     def rhp_get_base_cell(self) -> AnyDataFrame:
         """
         Adds a column 'rhp_base_cell' with the resolution 0 parent cell to the dataframe.
         """
-        return self._apply_index_assign(rhp_py.rhp_get_base_cell, "rhp_base_cell")
+        return self._apply_index_assign(rhp_py.rhp_get_base_cell, COLUMNS["base_cell"])
 
     def rhp_is_valid(self) -> AnyDataFrame:
         """
         Adds a column 'rhp_is_valid' indicating if the cell addresses are valid rHEALPix
         addresses or not.
         """
-        return self._apply_index_assign(rhp_py.rhp_is_valid, "rhp_is_valid")
+        return self._apply_index_assign(rhp_py.rhp_is_valid, COLUMNS["is_valid"])
 
     def k_ring(
         self, k: int = 1, explode: bool = False, verbose: bool = True
@@ -154,7 +158,7 @@ class rHPAccessor:
             warn(str.format(rhp_py.CELL_RING_WARNING, "k"))
 
         func = wrapped_partial(rhp_py.k_ring, k=k, verbose=False)
-        column_name = "rhp_k_ring"
+        column_name = COLUMNS["k_ring"]
         if explode:
             return self._apply_index_explode(func, column_name, list)
         return self._apply_index_assign(func, column_name, list)
@@ -176,7 +180,7 @@ class rHPAccessor:
             warn(str.format(rhp_py.CELL_RING_WARNING, "cell"))
 
         func = wrapped_partial(rhp_py.cell_ring, k=k, verbose=False)
-        column_name = "rhp_cell_ring"
+        column_name = COLUMNS["cell_ring"]
         if explode:
             return self._apply_index_explode(func, column_name, list)
         return self._apply_index_assign(func, column_name, list)
@@ -191,7 +195,11 @@ class rHPAccessor:
         resolution : int or None
             rHEALPix resolution. If None, then returns the direct parent of each rHEALPix cell.
         """
-        column = f"rhp_{resolution:02}" if resolution is not None else "rhp_parent"
+        column = (
+            f"{COLUMNS['prefix']}{resolution:02}"
+            if resolution is not None
+            else COLUMNS["parent"]
+        )
 
         return self._apply_index_assign(
             wrapped_partial(rhp_py.rhp_to_parent, res=resolution), column
@@ -210,7 +218,7 @@ class rHPAccessor:
         """
         return self._apply_index_assign(
             wrapped_partial(rhp_py.rhp_to_center_child, res=resolution),
-            "rhp_center_child",
+            COLUMNS["center_child"],
         )
 
     def polyfill(
@@ -242,21 +250,21 @@ class rHPAccessor:
 
         # Need to wrap polyfill for each dataframe row so we can call it with geometry
         def func(row):
-            if not "geometry" in row.keys():
+            if not COLUMNS["geometry"] in row.keys():
                 return None
             else:
                 return rhp_py.polyfill(
-                    row.geometry, resolution, False, compress, verbose
+                    row[COLUMNS["geometry"]], resolution, False, compress, verbose
                 )
 
         # Polyfill cell sets for each row
         result = self._df.apply(func, axis=1)
 
         if not explode:
-            assign_args = {"rhp_polyfill": result}
+            assign_args = {COLUMNS["polyfill"]: result}
             return self._df.assign(**assign_args)
 
-        result = result.explode().to_frame("rhp_polyfill")
+        result = result.explode().to_frame(COLUMNS["polyfill"])
 
         return self._df.join(result)
 
@@ -272,9 +280,13 @@ class rHPAccessor:
         TODO: find out the meaning of unit "rads^2" that appears in h3pandas
         """
         return self._apply_index_assign(
-            wrapped_partial(rhp_py.cell_area, unit=unit), "rhp_cell_area"
+            wrapped_partial(rhp_py.cell_area, unit=unit), COLUMNS["cell_area"]
         )
 
+    def linetrace(self) -> AnyDataFrame:
+        raise NotImplementedError()
+
+    # Aggregate functions
     def geo_to_rhp_aggregate(
         self,
         resolution: int,
@@ -312,10 +324,14 @@ class rHPAccessor:
         geo_to_rhp : rHEALPix API method upon which this function builds
 
         """
-        colname = f"rhp_{resolution:02}" if resolution is not None else "rhp_parent"
+        colname = (
+            f"{COLUMNS['prefix']}{resolution:02}"
+            if resolution is not None
+            else COLUMNS["parent"]
+        )
         grouped = pd.DataFrame(
             self.geo_to_rhp(resolution, lat_col, lng_col, False)
-            .drop(columns=[lat_col, lng_col, "geometry"], errors="ignore")
+            .drop(columns=[lat_col, lng_col, COLUMNS["geometry"]], errors="ignore")
             .groupby(colname)
             .agg(operation)
         )
@@ -355,25 +371,69 @@ class rHPAccessor:
             for rhpaddress in self._df.index
         ]
         rhp_parent_column = (
-            f"rhp_{resolution:02}" if resolution is not None else "rhp_parent"
+            f"{COLUMNS['prefix']}{resolution:02}"
+            if resolution is not None
+            else COLUMNS["parent"]
         )
         kwargs_assign = {rhp_parent_column: parent_rhpaddresses}
         grouped = (
             self._df.assign(**kwargs_assign)
             .groupby(rhp_parent_column)[
-                [c for c in self._df.columns if c != "geometry"]
+                [c for c in self._df.columns if c != COLUMNS["geometry"]]
             ]
             .agg(operation)
         )
 
         return grouped.rhp.rhp_to_geo_boundary() if return_geometry else grouped
 
-    def polyfill_resample(self) -> AnyDataFrame:
-        raise NotImplementedError()
+    def polyfill_resample(
+        self,
+        resolution: int,
+        return_geometry: bool = True,
+        compress: bool = False,
+        verbose: bool = True,
+    ) -> AnyDataFrame:
+        """Experimental as stated in h3pandas, where this function comes from.
+        Currently essentially polyfill(..., explode=True) that sets the rHEALPix
+        index and adds the rHEALPix cell geometry if requested by return_geometry.
 
-    def linetrace(self) -> AnyDataFrame:
-        raise NotImplementedError()
+        Parameters
+        ----------
+        resolution : int
+            rHEALPix resolution
+        return_geometry: bool
+            (Optional) Whether to add a `geometry` column with the hexagonal cells.
+            Default = True
+        compress : bool
+            (Optional) Whether to compress cell groups that make up a parent cell
+            into the parent, returning 1 id instead of 9.
+            Default = False
 
+        Returns
+        -------
+        (Geo)DataFrame with rHEALPix cells with centroids within the input polygons.
+
+        See Also
+        --------
+        polyfill : rHEALPix API method upon which this method builds
+        """
+        result = self._df.rhp.polyfill(
+            resolution, explode=True, compress=compress, verbose=verbose
+        )
+        uncovered_rows = result[COLUMNS["polyfill"]].isna()
+        n_uncovered_rows = uncovered_rows.sum()
+        if verbose and (n_uncovered_rows > 0):
+            warn(
+                f"{n_uncovered_rows} rows did not generate a cell."
+                "Consider using a finer resolution."
+            )
+            result = result.loc[~uncovered_rows]
+
+        result = result.reset_index().set_index(COLUMNS["polyfill"])
+
+        return result.rhp.rhp_to_geo_boundary() if return_geometry else result
+
+    # Helper functions
     def _apply_index_assign(
         self,
         func: Callable,

@@ -1,4 +1,5 @@
 COLUMNS = {
+    "prefix": "rhp_",
     "is_valid": "rhp_is_valid",
     "resolution": "rhp_resolution",
     "base_cell": "rhp_base_cell",

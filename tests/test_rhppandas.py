@@ -544,8 +544,8 @@ class TestPolyfillResample:
         assert not result["val"].isna().any()
 
     def test_polyfill_resample_uncovered_rows(self, basic_geodataframe_polygons):
-        basic_geodataframe_polygons.iloc[1] = box(0, 0, 3, 3)
+        basic_geodataframe_polygons.iloc[1] = box(14, 50, 15, 53)
         with pytest.warns(UserWarning):
             result = basic_geodataframe_polygons.rhp.polyfill_resample(2)
 
-        assert len(result) == 2
+        assert len(result) == 0

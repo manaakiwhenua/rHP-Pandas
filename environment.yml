@@ -8,5 +8,4 @@ dependencies:
   - geopandas>=0.9.*
   - pip
   - pip:
-    # Use pip to install rhp from dev branch of git repo
-    - git+https://github.com/manaakiwhenua/rhealpixdggs-py.git
+    - rHEALPixDGGS>0.5.*

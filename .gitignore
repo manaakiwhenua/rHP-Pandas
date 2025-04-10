@@ -5,3 +5,6 @@ __pycache__/
 .vscode/
 
 .coverage
+
+dist
+rhppandas.egg-info

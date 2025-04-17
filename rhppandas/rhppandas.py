@@ -283,8 +283,46 @@ class rHPAccessor:
             wrapped_partial(rhp_py.cell_area, unit=unit), COLUMNS["cell_area"]
         )
 
-    def linetrace(self) -> AnyDataFrame:
-        raise NotImplementedError()
+    def linetrace(
+        self, resolution: int, explode: bool = False, verbose: bool = True
+    ) -> AnyDataFrame:
+        """Experimental. An rHEALPix cell representation of a (Multi)LineString,
+        which permits repeated cells, but not if they are repeated in immediate
+        sequence.
+
+        Parameters
+        ----------
+        resolution : int
+            rHEALPix resolution
+        explode : bool
+            If True, will explode the resulting list vertically.
+            All other columns' values are copied.
+            Default: False
+
+        Returns
+        -------
+        (Geo)DataFrame with rHEALPix cells with centroids within the input polygons.
+        """
+
+        # Need to wrap linetrace for each dataframe row so we can call it with geometry
+        def func(row):
+            if not COLUMNS["geometry"] in row.keys():
+                return None
+            else:
+                return rhp_py.linetrace(
+                    row[COLUMNS["geometry"]], resolution, plane=False, verbose=verbose
+                )
+
+        df = self._df
+
+        # Linetrace cell sets for each row
+        result = df.apply(func, axis=1)
+        if not explode:
+            assign_args = {COLUMNS["linetrace"]: result}
+            return df.assign(**assign_args)
+
+        result = result.explode().to_frame(COLUMNS["linetrace"])
+        return df.join(result)
 
     # Aggregate functions
     def geo_to_rhp_aggregate(
@@ -506,6 +544,3 @@ class rHPAccessor:
         )
         result = self._df.join(result)
         return finalizer(result)
-
-    def _multiply_numeric(self):
-        raise NotImplementedError()

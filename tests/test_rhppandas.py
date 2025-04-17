@@ -468,8 +468,8 @@ class TestCellArea:
 
 class TestLinetrace:
     def test_empty_linetrace(self, basic_geodataframe_empty_linestring):
-        result = basic_geodataframe_empty_linestring.rhp.linetrace(2)
-        assert len(result.iloc[0][COLUMNS["linetrace"]]) == 0
+        result = basic_geodataframe_empty_linestring.rhp.linetrace(2, verbose=False)
+        assert result.iloc[0][COLUMNS["linetrace"]] == None
 
     def test_linetrace(self, basic_geodataframe_linestring):
         result = basic_geodataframe_linestring.rhp.linetrace(3)

@@ -9,4 +9,4 @@ dependencies:
   - pip
   - pip:
     #- rHEALPixDGGS>=0.5.*
-    - git+https://github.com/manaakiwhenua/rhealpixdggs-py.git@demaion/linetrace
+    - git+https://github.com/manaakiwhenua/rhealpixdggs-py.git

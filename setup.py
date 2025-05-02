@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 from os import path
 
-__version__: str = "0.1.3"
+__version__: str = "0.2.0"
 
 # read the contents of README file
 this_directory = path.abspath(path.dirname(__file__))

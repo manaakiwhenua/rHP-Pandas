@@ -8,5 +8,4 @@ dependencies:
   - geopandas>=0.9.*
   - pip
   - pip:
-    #- rHEALPixDGGS>=0.5.*
-    - git+https://github.com/manaakiwhenua/rhealpixdggs-py.git
+    - rhealpixdggs>=0.5.7

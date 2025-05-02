@@ -1,10 +1,12 @@
 # rHP-Pandas
 Package `rhppandas` intends to recreate for rHEALPix what `h3pandas`, developed by Daniel Jahn (https://github.com/DahnJ/H3-Pandas), does for `h3-py`, the Python binding for Uber's H3 DGGS. It provides a bridge between package `rhealpixdggs` and the dataframes used by `pandas` and `geopandas`.
 
-> [!IMPORTANT]
-> This is very much a work in progress, and in the early stages. Some of the API available in `h3pandas` remains unimplemented, none of it has been used in production. The package comes with some tests but we make no claims of completeness regarding those.
+Comments, bug reports and suggestions are all welcome.
 
-In other words: the package in its current form is mostly meant for developers, and not in a state that would be suitable for end users.
+> [!IMPORTANT]
+> This a work in progress. Most of the API outlined by `h3pandas` has been implemented but its use in production remains limited. The package comes with some tests but we make no claims of completeness regarding those.
+
+In other words: the package in its current form is mostly meant for developers, or maybe for experienced end users.
 
 ## Conda Environment
 Use yaml file `environment.yml` to create a conda environment for basic use if you'd like to give the package a spin.
@@ -12,9 +14,7 @@ Use yaml file `environment.yml` to create a conda environment for basic use if y
 Adding yaml file `environment-dev.yml` to your conda environment will add the packages you need to run the automated tests.
 
 > [!NOTE]
-> A large part of why some of the API remains unimplemented has to do with the relevant functions in the backend not being implemented yet either. Development of the wrapper API within `rhealpixdggs` is happening in tandem with `rhppandas`, with the intention of adding adapter functions one by one as the backend is fleshed out.
-
-This also explains why `environment.yml` points to a branch of the `rhealpixdggs-py` repository instead of a release of the `rhealpixdggs` package.
+> The implementations of `linetrace` and `cell_ring` / `k_ring` in the backend remain incomplete. They work for well-behaved cases. But `linetrace` may fail to produce correct results if a line segment intersects the boundary of a polar cap cell, while `cell_ring` / `k_ring` cannot handle situations directly involving a corner of the dggs cube. Otherwise, development of the wrapper API within `rhealpixdggs` happened in tandem with `rhppandas` and currently matches what `h3pandas` uses from `h3-py`.
 
 ## Usage Examples
 Using a basic dataframe with lat/lng coordinates:
@@ -93,6 +93,6 @@ Using a basic dataframe with lat/lng coordinates:
 ```
 
 ## Running Tests
-rhppandas uses pytest as its test framework. Type `pytest` in a shell with an active conda environment for rhppandas.
+rhppandas uses pytest as its test framework. Make sure that your environment includes both `environment.yml` and `environment-dev.yml` and is activated. Then type `pytest` in a shell with the active conda environment.
 
 Typing `pytest --cov` will run the tests and print some info on test coverage of the code base.

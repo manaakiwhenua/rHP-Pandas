@@ -8,4 +8,4 @@ dependencies:
   - geopandas>=0.9.*
   - pip
   - pip:
-    - rHEALPixDGGS>=0.5.*
+    - rhealpixdggs>=0.5.7

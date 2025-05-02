@@ -4,7 +4,7 @@ import pandas as pd
 import geopandas as gpd
 
 from geopandas.testing import assert_geodataframe_equal
-from shapely.geometry import box, Polygon
+from shapely.geometry import box, Polygon, LineString, MultiLineString
 
 from rhppandas import rhppandas
 from rhppandas.util.const import *
@@ -55,6 +55,33 @@ def basic_geodataframe_polygons():
 
 
 @pytest.fixture
+def basic_geodataframe_linestring():
+    geom = LineString([(174.793092, -37.005372), (175.621138, -40.323142)])
+    return gpd.GeoDataFrame(geometry=[geom], crs="epsg:4326")
+
+
+@pytest.fixture
+def basic_geodataframe_multilinestring():
+    geom = MultiLineString(
+        [
+            [[174.793092, -37.005372], [175.621138, -40.323142]],
+            [
+                [-14.793092, -37.005372],
+                [-15.621138, -40.323142],
+                [-18.333333, -36.483403],
+            ],
+        ]
+    )
+    return gpd.GeoDataFrame(geometry=[geom], crs="epsg:4326")
+
+
+@pytest.fixture
+def basic_geodataframe_empty_linestring():
+    """GeoDataFrame with Empty geometry"""
+    return gpd.GeoDataFrame(geometry=[LineString()], crs="epsg:4326")
+
+
+@pytest.fixture
 def indexed_dataframe(basic_dataframe):
     """DataFrame with lat, lng and resolution 9 rHEALPix index"""
     return basic_dataframe.assign(rhp_09=["N216055611", "N208542111"]).set_index(
@@ -87,6 +114,11 @@ def rhp_geodataframe_with_values(rhp_dataframe_with_values):
     return gpd.GeoDataFrame(
         rhp_dataframe_with_values, geometry=geometry, crs="epsg:4326"
     )
+
+
+@pytest.fixture
+def rhp_geodataframe_with_polyline_values(basic_geodataframe_linestring):
+    return basic_geodataframe_linestring.assign(val=10)
 
 
 # Tests: rHEALPix wrapper API
@@ -435,7 +467,71 @@ class TestCellArea:
 
 
 class TestLinetrace:
-    pass
+    def test_empty_linetrace(self, basic_geodataframe_empty_linestring):
+        result = basic_geodataframe_empty_linestring.rhp.linetrace(2, verbose=False)
+        assert result.iloc[0][COLUMNS["linetrace"]] == None
+
+    def test_linetrace(self, basic_geodataframe_linestring):
+        result = basic_geodataframe_linestring.rhp.linetrace(3)
+        expected_indices = ["R884", "R887"]
+        assert len(result.iloc[0][COLUMNS["linetrace"]]) == 2
+        assert list(result.iloc[0][COLUMNS["linetrace"]]) == expected_indices
+
+    def test_linetrace_explode(self, basic_geodataframe_linestring):
+        result = basic_geodataframe_linestring.rhp.linetrace(3, explode=True)
+        expected_indices = ["R884", "R887"]
+        assert result.shape == (2, 2)
+        assert result.iloc[0][COLUMNS["linetrace"]] == expected_indices[0]
+        assert result.iloc[-1][COLUMNS["linetrace"]] == expected_indices[-1]
+
+    def test_linetrace_with_values(self, rhp_geodataframe_with_polyline_values):
+        result = rhp_geodataframe_with_polyline_values.rhp.linetrace(3)
+        expected_indices = ["R884", "R887"]
+        assert result.shape == (1, 3)
+        assert "val" in result.columns
+        assert result.iloc[0]["val"] == 10
+        assert len(result.iloc[0][COLUMNS["linetrace"]]) == 2
+        assert list(result.iloc[0][COLUMNS["linetrace"]]) == expected_indices
+
+    def test_linetrace_with_values_explode(self, rhp_geodataframe_with_polyline_values):
+        result = rhp_geodataframe_with_polyline_values.rhp.linetrace(3, explode=True)
+        expected_indices = ["R884", "R885", "R888", "R887"]
+        assert result.shape == (2, 3)
+        assert "val" in result.columns
+        assert result.iloc[0]["val"] == 10
+        assert result.iloc[0][COLUMNS["linetrace"]] == expected_indices[0]
+        assert result.iloc[-1][COLUMNS["linetrace"]] == expected_indices[-1]
+        assert not result["val"].isna().any()
+
+    def test_linetrace_multiline(self, basic_geodataframe_multilinestring):
+        result = basic_geodataframe_multilinestring.rhp.linetrace(3)
+        expected_indices = ["R884", "R887", "P874", "P877", "P876", "P873"]
+        assert len(result.iloc[0][COLUMNS["linetrace"]]) == 6  # 6 cells total
+        assert list(result.iloc[0][COLUMNS["linetrace"]]) == expected_indices
+
+    def test_linetrace_multiline_explode_index_parts(
+        self, basic_geodataframe_multilinestring
+    ):
+        result = basic_geodataframe_multilinestring.explode(
+            index_parts=True
+        ).rhp.linetrace(3, explode=True)
+        expected_indices = [["R884", "R887"], ["P874", "P877", "P876", "P873"]]
+        assert len(result[COLUMNS["linetrace"]]) == 6  # 6 cells in total
+        assert result.iloc[0][COLUMNS["linetrace"]] == expected_indices[0][0]
+        assert result.iloc[-1][COLUMNS["linetrace"]] == expected_indices[-1][-1]
+
+    def test_linetrace_multiline_index_parts_no_explode(
+        self, basic_geodataframe_multilinestring
+    ):
+        result = basic_geodataframe_multilinestring.explode(
+            index_parts=True
+        ).rhp.linetrace(3, explode=False)
+        expected_indices = [["R884", "R887"], ["P874", "P877", "P876", "P873"]]
+        assert len(result[COLUMNS["linetrace"]]) == 2  # 2 parts
+        assert len(result.iloc[0][COLUMNS["linetrace"]]) == 2  # 2 cells
+        assert result.iloc[0][COLUMNS["linetrace"]] == expected_indices[0]
+        assert len(result.iloc[-1][COLUMNS["linetrace"]]) == 4  # 4 cells
+        assert result.iloc[-1][COLUMNS["linetrace"]] == expected_indices[-1]
 
 
 # Tests: Aggregate functions

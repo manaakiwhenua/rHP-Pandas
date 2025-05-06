@@ -34,6 +34,7 @@ class rHPAccessor:
         lat_col: str = "lat",
         lng_col: str = "lng",
         set_index: bool = True,
+        verbose: bool = True,
     ) -> AnyDataFrame:
         """
         Adds rHEALPix index to (Geo)DataFrame
@@ -54,6 +55,8 @@ class rHPAccessor:
         -------
         (Geo)DataFrame with rHEALPix addresses added
         """
+        if verbose:
+            self._crs_check_and_warn()
 
         # DataFrame wrangling
         if isinstance(self._df, gpd.GeoDataFrame):
@@ -77,7 +80,7 @@ class rHPAccessor:
             return df.set_index(colname)
         return df
 
-    def rhp_to_geo(self) -> gpd.GeoDataFrame:
+    def rhp_to_geo(self, verbose=True) -> gpd.GeoDataFrame:
         """Add `geometry` with centroid of each rHEALPix address to the DataFrame.
         Assumes rHEALPix index.
 
@@ -89,6 +92,9 @@ class rHPAccessor:
         --------
         rhp_to_geo_boundary : Adds an rHEALPix cell
         """
+        if verbose:
+            self._crs_check_and_warn()
+
         return self._apply_index_assign(
             wrapped_partial(rhp_py.rhp_to_geo, geo_json=True, plane=False),
             COLUMNS["geometry"],
@@ -98,13 +104,16 @@ class rHPAccessor:
             ),  # TODO: add correct coordinate system?
         )
 
-    def rhp_to_geo_boundary(self) -> AnyDataFrame:
+    def rhp_to_geo_boundary(self, verbose=True) -> AnyDataFrame:
         """Add `geometry` with rHEALPix squares to the DataFrame. Assumes rHEALPix index.
 
         Returns
         -------
         GeoDataFrame with rHEALPix geometry
         """
+        if verbose:
+            self._crs_check_and_warn()
+
         return self._apply_index_assign(
             wrapped_partial(rhp_py.rhp_to_geo_boundary, geo_json=True, plane=False),
             COLUMNS["geometry"],
@@ -128,11 +137,14 @@ class rHPAccessor:
         """
         return self._apply_index_assign(rhp_py.rhp_get_base_cell, COLUMNS["base_cell"])
 
-    def rhp_is_valid(self) -> AnyDataFrame:
+    def rhp_is_valid(self, verbose=True) -> AnyDataFrame:
         """
         Adds a column 'rhp_is_valid' indicating if the cell addresses are valid rHEALPix
         addresses or not.
         """
+        if verbose:
+            self._crs_check_and_warn()
+
         return self._apply_index_assign(rhp_py.rhp_is_valid, COLUMNS["is_valid"])
 
     def k_ring(
@@ -155,6 +167,7 @@ class rHPAccessor:
             to the k-ring cells
         """
         if verbose:
+            self._crs_check_and_warn()
             warn(str.format(rhp_py.CELL_RING_WARNING, "k"))
 
         func = wrapped_partial(rhp_py.k_ring, k=k, verbose=False)
@@ -177,6 +190,7 @@ class rHPAccessor:
         entries).
         """
         if verbose:
+            self._crs_check_and_warn()
             warn(str.format(rhp_py.CELL_RING_WARNING, "cell"))
 
         func = wrapped_partial(rhp_py.cell_ring, k=k, verbose=False)
@@ -247,6 +261,8 @@ class rHPAccessor:
             parent cell instead of the individual child addresses.
             Default: False
         """
+        if verbose:
+            self._crs_check_and_warn()
 
         # Need to wrap polyfill for each dataframe row so we can call it with geometry
         def func(row):
@@ -268,7 +284,9 @@ class rHPAccessor:
 
         return self._df.join(result)
 
-    def cell_area(self, unit: Literal["km^2", "m^2"] = "km^2") -> AnyDataFrame:
+    def cell_area(
+        self, unit: Literal["km^2", "m^2"] = "km^2", verbose: bool = True
+    ) -> AnyDataFrame:
         """
         Adds a column 'rhp_cell_area' to the dataframe of cells addresses.
         ----------
@@ -279,6 +297,9 @@ class rHPAccessor:
 
         TODO: find out the meaning of unit "rads^2" that appears in h3pandas
         """
+        if verbose:
+            self._crs_check_and_warn()
+
         return self._apply_index_assign(
             wrapped_partial(rhp_py.cell_area, unit=unit), COLUMNS["cell_area"]
         )
@@ -334,6 +355,7 @@ class rHPAccessor:
         lat_col: str = "lat",
         lng_col: str = "lng",
         return_geometry: bool = True,
+        verbose: bool = True,
     ) -> pd.DataFrame:
         """Adds rHEALPix index to DataFrame, groups points with the same index
         and performs `operation`.
@@ -370,19 +392,24 @@ class rHPAccessor:
             else COLUMNS["parent"]
         )
         grouped = pd.DataFrame(
-            self.geo_to_rhp(resolution, lat_col, lng_col, False)
+            self.geo_to_rhp(resolution, lat_col, lng_col, False, verbose)
             .drop(columns=[lat_col, lng_col, COLUMNS["geometry"]], errors="ignore")
             .groupby(colname)
             .agg(operation)
         )
 
-        return grouped.rhp.rhp_to_geo_boundary() if return_geometry else grouped
+        return (
+            grouped.rhp.rhp_to_geo_boundary(verbose=verbose)
+            if return_geometry
+            else grouped
+        )
 
     def rhp_to_parent_aggregate(
         self,
         resolution: int,
         operation: Union[dict, str, Callable] = "sum",
         return_geometry: bool = True,
+        verbose: bool = True,
     ) -> gpd.GeoDataFrame:
         """Assigns parent cell to each row, groups by it and performs `operation`.
         Assumes rHEALPix index.
@@ -424,7 +451,11 @@ class rHPAccessor:
             .agg(operation)
         )
 
-        return grouped.rhp.rhp_to_geo_boundary() if return_geometry else grouped
+        return (
+            grouped.rhp.rhp_to_geo_boundary(verbose=verbose)
+            if return_geometry
+            else grouped
+        )
 
     def polyfill_resample(
         self,

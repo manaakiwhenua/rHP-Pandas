@@ -124,7 +124,7 @@ def rhp_geodataframe_with_polyline_values(basic_geodataframe_linestring):
 # Tests: rHEALPix wrapper API
 class TestGeoToRhp:
     def test_geo_to_rhp(self, basic_dataframe):
-        result = basic_dataframe.rhp.geo_to_rhp(9)
+        result = basic_dataframe.rhp.geo_to_rhp(9, verbose=False)
         expected = basic_dataframe.assign(
             rhp_09=["N216055147", "N208518546"]
         ).set_index(f"{COLUMNS['prefix']}09")
@@ -150,7 +150,7 @@ class TestRhpToGeo:
         lngs = [14.000847727642311, 14.998138688394175]
         geometry = gpd.points_from_xy(x=lngs, y=lats, crs="epsg:4326")
         expected = gpd.GeoDataFrame(indexed_dataframe, geometry=geometry)
-        result = indexed_dataframe.rhp.rhp_to_geo()
+        result = indexed_dataframe.rhp.rhp_to_geo(verbose=False)
 
         assert_geodataframe_equal(expected, result, check_less_precise=True)
 
@@ -173,7 +173,7 @@ class TestRhpToGeoBoundary:
         )
         geometry = [Polygon(c1), Polygon(c2)]
 
-        result = indexed_dataframe.rhp.rhp_to_geo_boundary()
+        result = indexed_dataframe.rhp.rhp_to_geo_boundary(verbose=False)
         expected = gpd.GeoDataFrame(
             indexed_dataframe, geometry=geometry, crs="epsg:4326"
         )
@@ -190,7 +190,7 @@ class TestRhpToGeoBoundary:
         )
         geometry = [Polygon(c), Polygon()]
         indexed_dataframe.index = [str(indexed_dataframe.index[0])] + ["invalid"]
-        result = indexed_dataframe.rhp.rhp_to_geo_boundary()
+        result = indexed_dataframe.rhp.rhp_to_geo_boundary(verbose=False)
         expected = gpd.GeoDataFrame(
             indexed_dataframe, geometry=geometry, crs="epsg:4326"
         )
@@ -225,7 +225,7 @@ class TestRhpIsValid:
     def test_rhp_is_valid(self, indexed_dataframe):
         indexed_dataframe.index = [str(indexed_dataframe.index[0])] + ["invalid"]
         expected = indexed_dataframe.assign(rhp_is_valid=[True, False])
-        result = indexed_dataframe.rhp.rhp_is_valid()
+        result = indexed_dataframe.rhp.rhp_is_valid(verbose=False)
 
         pd.testing.assert_frame_equal(expected, result)
 
@@ -461,7 +461,7 @@ class TestCellArea:
         expected = indexed_dataframe.assign(
             rhp_cell_area=[0.258507625363534, 0.258507625363534]
         )
-        result = indexed_dataframe.rhp.cell_area()
+        result = indexed_dataframe.rhp.cell_area(verbose=False)
 
         pd.testing.assert_frame_equal(expected, result)
 
@@ -538,7 +538,7 @@ class TestLinetrace:
 class TestGeoToRhpAggregate:
     def test_geo_to_rhp_aggregate(self, basic_dataframe_with_values):
         result = basic_dataframe_with_values.rhp.geo_to_rhp_aggregate(
-            1, return_geometry=False
+            1, return_geometry=False, verbose=False
         )
         expected = pd.DataFrame(
             {f"{COLUMNS['prefix']}01": ["N2"], "val": [2 + 5]}
@@ -557,7 +557,7 @@ class TestGeoToRhpAggregate:
         pd.testing.assert_frame_equal(expected, result)
 
     def test_geo_to_rhp_aggregate_with_geometry(self, basic_dataframe_with_values):
-        result = basic_dataframe_with_values.rhp.geo_to_rhp_aggregate(1)
+        result = basic_dataframe_with_values.rhp.geo_to_rhp_aggregate(1, verbose=False)
         indexed = pd.DataFrame(
             {f"{COLUMNS['prefix']}01": ["N2"], "val": [2 + 5]}
         ).set_index(f"{COLUMNS['prefix']}01")
@@ -571,7 +571,9 @@ class TestGeoToRhpAggregate:
 
 class TestRhpToParentAggregate:
     def test_rhp_to_parent_aggregate(self, rhp_geodataframe_with_values):
-        result = rhp_geodataframe_with_values.rhp.rhp_to_parent_aggregate(8)
+        result = rhp_geodataframe_with_values.rhp.rhp_to_parent_aggregate(
+            8, verbose=False
+        )
 
         index = pd.Index(["N21605561"], name=f"{COLUMNS['prefix']}08")
         geometry = [Polygon(rhp_py.rhp_to_geo_boundary(h, True, False)) for h in index]

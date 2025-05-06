@@ -303,6 +303,8 @@ class rHPAccessor:
         -------
         (Geo)DataFrame with rHEALPix cells with centroids within the input polygons.
         """
+        if verbose:
+            self._crs_check_and_warn()
 
         # Need to wrap linetrace for each dataframe row so we can call it with geometry
         def func(row):
@@ -544,3 +546,22 @@ class rHPAccessor:
         )
         result = self._df.join(result)
         return finalizer(result)
+
+    def _crs_check_and_warn(self):
+        """
+        rhppandas only supports coordinate system EPSG:4326 at the moment. This function checks
+        what coordinate system information is available and whether it matches what rhppandas
+        can provide.
+
+        Will print a warning that we assume EPSG:4326 if there is no coordinate system information
+        in the dataframe.
+
+        Will print a warning about incorrect results if a coordinate system other than EPSG:4326
+        is set.
+        """
+        if not hasattr(self._df, "crs"):
+            warn(WARNING_NO_CRS)
+        elif not self._df.crs:
+            warn(WARNING_CRS_NOT_SET)
+        elif self._df.crs.to_epsg() != 4326:
+            warn(str.format(WARNING_UNSUPPORTED_CRS, self._df.crs.to_epsg()))

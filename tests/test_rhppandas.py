@@ -645,3 +645,20 @@ class TestPolyfillResample:
             result = basic_geodataframe_polygons.rhp.polyfill_resample(2)
 
         assert len(result) == 0
+
+
+# Tests: Helper functions
+class TestCRSCheckAndWarn:
+    def test_crs_check_no_crs_field(self, basic_dataframe):
+        with pytest.warns(UserWarning):
+            basic_dataframe.rhp._crs_check_and_warn()
+
+    def test_crs_check_no_crs(self, basic_geodataframe):
+        basic_geodataframe.set_crs(crs=None, inplace=True, allow_override=True)
+        with pytest.warns(UserWarning):
+            basic_geodataframe.rhp._crs_check_and_warn()
+
+    def test_crs_check_wrong_crs(self, basic_geodataframe):
+        basic_geodataframe.set_crs(epsg=4272, inplace=True, allow_override=True)
+        with pytest.warns(UserWarning):
+            basic_geodataframe.rhp._crs_check_and_warn()

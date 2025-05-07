@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+ 
+[project]
+name = "rhppandas"
+version = "0.2.0"
+description = "Integration of rHEALPixDGGS and Pandas/GeoPandas" 
+readme = "README.md"
+license = "GPL-3.0-or-later"
+authors = [{ name = "MWLR", email = "lawr@landcareresearch.co.nz" }]
+requires-python = ">=3.11"
+keywords = [
+    "python",
+    "rHEALPix",
+    "rhealpixdggs",
+    "geospatial",
+    "geopandas",
+    "pandas",
+    "integration",
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: GIS",
+]
+dependencies = [
+    "geopandas",
+    "numpy",
+    "pandas",
+    "shapely",
+    "rhealpixdggs",
+    "numpy",
+    "typing-extensions",
+]
+ 
+[project.urls]
+bug_reports = "https://github.com/manaakiwhenua/rHP-Pandas/issues"
+source = "https://github.com/manaakiwhenua/rHP-Pandas"
+ 
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov"]
+
+[tool.setuptools]
+packages = ["rhppandas"]
+

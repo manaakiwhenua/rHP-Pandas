@@ -1,0 +1,50 @@
+## conda package definition
+
+package:
+  name: rhppandas
+  version: 0.2.0
+
+source:
+  url: https://github.com/manaakiwhenua/rHP-Pandas/archive/refs/heads/heaysa/conda-package.zip
+  sha256: f08ec177de12a945ff6aa93278d104016ea7fd77374b4a450baa391a6a03d5b7
+
+build:
+  noarch: python
+  script: pip install .
+  number: 0
+
+requirements:
+  host:
+    - python >=3.11
+    - setuptools >=61
+    - wheel
+    - pip
+  run:
+    - geopandas
+    - numpy
+    - pandas
+    - shapely
+    ## uncomment with rhealpixdggs package is present on conda-forge
+    ### - rhealpixdggs
+    - numpy
+    - typing-extensions
+
+tests:
+  - python:
+      imports:
+        - rhppandas
+      pip_check: true
+    ## Could add internal tests if these were included in the package
+    ### - python -m unittest discover ../tests/ 
+    ### - python -m doctest ../docs/source/introduction.rst ../rhealpixdggs/*.py
+
+about:
+  ### homepage: "https://datastore.landcareresearch.co.nz/dataset/rhealpix-discrete-global-grid-system"
+  repository: "https://github.com/manaakiwhenua/rHP-Pandas"
+  summary: "Integration of rHEALPixDGGS and Pandas/GeoPandas" 
+  license: GPL-3.0-or-later
+  license_file: LICENSE
+
+### extra:
+  ### recipe-maintainers:
+    ### - aheays

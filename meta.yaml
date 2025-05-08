@@ -20,8 +20,8 @@ requirements:
     - wheel
     - pip
   run:
-    ## uncomment when rhealpixdggs is present on conda-forge
-    ### - rhealpixdggs
+    - python >=3.11
+    - rhealpixdggs
     - geopandas
     - numpy
     - pandas
@@ -29,15 +29,15 @@ requirements:
     - numpy
     - typing-extensions
 
-## uncomment when rhealpixdggs is present on conda-forge
-### tests:
-  ### - python:
-      ### imports:
-        ### - rhppandas
-  ### - script:
-      ### - pytest site-packages/*/tests
-    ### requirements:
-      ### run: pytest
+tests:
+  - python:
+      imports:
+        - rhppandas
+      pip_check: true
+  - script:
+      - pytest 
+    requirements:
+      run: pytest
 
 about:
   repository: "https://github.com/manaakiwhenua/rHP-Pandas"

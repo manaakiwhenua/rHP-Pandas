@@ -25,11 +25,11 @@ classifiers = [
     "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
+    ### "rhealpixdggs",
     "geopandas",
     "numpy",
     "pandas",
     "shapely",
-    "rhealpixdggs",
     "numpy",
     "typing-extensions",
 ]
@@ -44,3 +44,5 @@ dev = ["pytest", "pytest-cov"]
 [tool.setuptools]
 packages = ["rhppandas"]
 
+[tool.setuptools.package-data]
+'*' = ["**/*"]

@@ -96,3 +96,7 @@ Using a basic dataframe with lat/lng coordinates:
 rhppandas uses pytest as its test framework. Make sure that your environment includes both `environment.yml` and `environment-dev.yml` and is activated. Then type `pytest` in a shell with the active conda environment.
 
 Typing `pytest --cov` will run the tests and print some info on test coverage of the code base.
+
+## Deployment
+There is a PyPI and conda package `rhppandas`.
+The conda package is maintained at [conda-forge](https://github.com/conda-forge/rhealpixdggs-feedstock).

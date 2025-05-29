@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
  
 [project]
 name = "rhppandas"
@@ -25,7 +25,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
-    ### "rhealpixdggs",
+    "rhealpixdggs",
     "geopandas",
     "numpy",
     "pandas",
@@ -41,8 +41,5 @@ source = "https://github.com/manaakiwhenua/rHP-Pandas"
 [project.optional-dependencies]
 dev = ["pytest", "pytest-cov"]
 
-[tool.setuptools]
-packages = ["rhppandas"]
-
-[tool.setuptools.package-data]
-'*' = ["**/*"]
+[tool.poetry]
+include = ["tests/"]

@@ -98,5 +98,10 @@ rhppandas uses pytest as its test framework. Make sure that your environment inc
 Typing `pytest --cov` will run the tests and print some info on test coverage of the code base.
 
 ## Deployment
-There is a PyPI and conda package `rhppandas`.
-The conda package is maintained at [conda-forge](https://github.com/conda-forge/rhealpixdggs-feedstock).
+Releases go to PyPI, then to conda-forge via the [rhppandas-feedstock](https://github.com/conda-forge/rhppandas-feedstock).
+
+From a clean, pushed `develop`:
+```
+scripts/release.sh --bump patch|minor|major
+```
+This runs the tests, bumps the version, pushes a `vX.Y.Z` tag and opens a draft GitHub release. Edit the notes and publish it; that triggers `.github/workflows/publish.yml`, which uploads to PyPI using trusted publishing (no tokens). `scripts/release.sh --help` lists the other options, including a TestPyPI rehearsal. The conda-forge bot then opens a feedstock PR; check its run requirements against `pyproject.toml` before merging.

@@ -557,11 +557,33 @@ class TestPolyfill:
 class TestCellArea:
     def test_cell_area(self, indexed_dataframe):
         expected = indexed_dataframe.assign(
-            rhp_cell_area=[0.258507625363534, 0.258507625363534]
+            rhp_cell_area=[0.2194280874856228, 0.2194280874856228]
         )
         result = indexed_dataframe.rhp.cell_area(verbose=False)
 
         pd.testing.assert_frame_equal(expected, result)
+
+    def test_cell_area_is_ground_area(self, indexed_dataframe):
+        # Equal-area grid: every resolution 9 cell covers the authalic surface
+        # area of the ellipsoid divided by the number of resolution 9 cells.
+        from math import pi
+
+        dggs = rhp_py.WGS84_003
+        authalic_area_km2 = 4 * pi * (dggs.ellipsoid.R_A / 1000) ** 2
+        expected_area = authalic_area_km2 / (6 * dggs.N_side ** (2 * 9))
+        result = indexed_dataframe.rhp.cell_area(verbose=False)
+
+        assert result[COLUMNS["cell_area"]].tolist() == pytest.approx(
+            [expected_area, expected_area], rel=1e-9
+        )
+
+    def test_cell_area_m2(self, indexed_dataframe):
+        km2 = indexed_dataframe.rhp.cell_area(unit="km^2", verbose=False)
+        m2 = indexed_dataframe.rhp.cell_area(unit="m^2", verbose=False)
+
+        assert m2[COLUMNS["cell_area"]].tolist() == pytest.approx(
+            (km2[COLUMNS["cell_area"]] * 10**6).tolist()
+        )
 
 
 class TestLinetrace:

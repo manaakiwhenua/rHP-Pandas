@@ -296,7 +296,13 @@ class rHPAccessor:
         self, unit: Literal["km^2", "m^2"] = "km^2", verbose: bool = True
     ) -> AnyDataFrame:
         """
-        Adds a column 'rhp_cell_area' to the dataframe of cells addresses.
+        Adds a column 'rhp_cell_area' with the area of each cell on the ellipsoid to
+        the dataframe of cell addresses.
+
+        rHEALPix is an equal-area grid, so all cells of one resolution have the same
+        area: the ellipsoid's authalic surface area divided by 6 * N_side ** (2 * res).
+        This is the ground area, not the area of the cell's square in the projection
+        plane, which is larger by the constant factor 3 * pi / 8.
         ----------
         Parameters
         ----------
@@ -309,7 +315,8 @@ class rHPAccessor:
             self._crs_check_and_warn()
 
         return self._apply_index_assign(
-            wrapped_partial(rhp_py.cell_area, unit=unit), COLUMNS["cell_area"]
+            wrapped_partial(rhp_py.cell_area, unit=unit, plane=False),
+            COLUMNS["cell_area"],
         )
 
     def linetrace(

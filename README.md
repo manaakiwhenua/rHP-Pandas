@@ -34,8 +34,8 @@ Using a basic dataframe with lat/lng coordinates:
 > geo2rhp
                lat  lng
     rhp_09              
-    N216055611   50   14
-    N208542111   51   15 
+    N216055147   50   14
+    N208518546   51   15
 ```
 * Turn DGGS cell indices into points and add them in the `geometry` column:
 ```
@@ -43,8 +43,8 @@ Using a basic dataframe with lat/lng coordinates:
 > rhp2geo
                 lat  lng                   geometry
     rhp_09                                         
-    N216055611   50   14  POINT (14.00085 50.00206)
-    N208542111   51   15  POINT (14.99814 51.00185)
+    N216055147   50   14    POINT (14.0006 49.9997)
+    N208518546   51   15  POINT (15.00186 50.99928)
 ```
 * Add cell boundaries as the `geometry` column:
 ```
@@ -52,8 +52,8 @@ Using a basic dataframe with lat/lng coordinates:
 > rhp2geoboundary
                 lat  lng                                           geometry
     rhp_09                                                                 
-    N216055611   50   14  POLYGON ((13.99625 50.00459, 14.0017 50.00459,...
-    N208542111   51   15  POLYGON ((14.99349 51.00438, 14.99907 51.00438...
+    N216055147   50   14  POLYGON ((13.99601 50.00223, 14.00145 50.00223...
+    N208518546   51   15  POLYGON ((14.99721 51.0018, 15.00279 51.0018, ...
 ```
 * Add a colum with cell resolutions to the dataframe:
 ```
@@ -61,8 +61,8 @@ Using a basic dataframe with lat/lng coordinates:
 > withresolution
                 lat  lng  rhp_resolution
     rhp_09                              
-    N216055611   50   14               9
-    N208542111   51   15               9
+    N216055147   50   14               9
+    N208518546   51   15               9
 ```
 * Add a column with the parent cell at resolution 0:
 ```
@@ -70,8 +70,8 @@ Using a basic dataframe with lat/lng coordinates:
 > withbasecell
                 lat  lng rhp_base_cell
     rhp_09                            
-    N216055611   50   14             N
-    N208542111   51   15             N
+    N216055147   50   14             N
+    N208518546   51   15             N
 ```
 * Add a column with the parent cell indices at resolution 5:
 ```
@@ -79,8 +79,8 @@ Using a basic dataframe with lat/lng coordinates:
 > withparent
                 lat  lng  rhp_05
     rhp_09                      
-    N216055611   50   14  N21605
-    N208542111   51   15  N20854
+    N216055147   50   14  N21605
+    N208518546   51   15  N20851
 ```
 * Add a column with the cell area:
 ```
@@ -88,8 +88,8 @@ Using a basic dataframe with lat/lng coordinates:
 > withcellarea
                 lat  lng  rhp_cell_area
     rhp_09                             
-    N216055611   50   14       0.258798
-    N208542111   51   15       0.258798
+    N216055147   50   14       0.219428
+    N208518546   51   15       0.219428
 ```
 
 ## Running Tests

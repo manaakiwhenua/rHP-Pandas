@@ -6,6 +6,7 @@ import pandas as pd
 import geopandas as gpd
 
 import rhealpixdggs.rhp_wrappers as rhp_py
+from rhealpixdggs.dggs import WGS84_003, RHEALPixDGGS
 
 from .util.const import *
 from .util.functools import wrapped_partial
@@ -107,6 +108,10 @@ class rHPAccessor:
     def rhp_to_geo_boundary(self, verbose=True) -> AnyDataFrame:
         """Add `geometry` with rHEALPix squares to the DataFrame. Assumes rHEALPix index.
 
+        Cell boundaries are computed in one batch so that vertices shared by
+        neighbouring cells are projected only once. Neighbouring cells therefore
+        get bit-identical shared vertices. Invalid indices get an empty Polygon.
+
         Returns
         -------
         GeoDataFrame with rHEALPix geometry
@@ -114,14 +119,15 @@ class rHPAccessor:
         if verbose:
             self._crs_check_and_warn()
 
-        return self._apply_index_assign(
-            wrapped_partial(rhp_py.rhp_to_geo_boundary, geo_json=True, plane=False),
-            COLUMNS["geometry"],
-            lambda x: shapely.geometry.Polygon(x),
-            lambda x: gpd.GeoDataFrame(
-                x, crs="epsg:4326"
-            ),  # TODO: add correct coordinate system?
-        )
+        geometry = [
+            shapely.geometry.Polygon(ring) if ring is not None else shapely.Polygon()
+            for ring in self._cell_boundaries(self._df.index)
+        ]
+        assign_args = {COLUMNS["geometry"]: geometry}
+
+        return gpd.GeoDataFrame(
+            self._df.assign(**assign_args), crs="epsg:4326"
+        )  # TODO: add correct coordinate system?
 
     def rhp_get_resolution(self) -> AnyDataFrame:
         """
@@ -603,6 +609,36 @@ class rHPAccessor:
         )
         result = self._df.join(result)
         return finalizer(result)
+
+    @staticmethod
+    def _cell_boundaries(
+        rhpindices, dggs: RHEALPixDGGS = WGS84_003
+    ) -> list[Union[tuple[tuple[float, float], ...], None]]:
+        """
+        Helper method. Returns the closed boundary ring of each rHEALPix index as a
+        tuple of (longitude, latitude) pairs, in the same order as `rhpindices`.
+        Invalid indices yield None.
+
+        Unlike calling `rhp_wrappers.rhp_to_geo_boundary` once per index, this
+        projects every distinct vertex once via `RHEALPixDGGS.cell_boundaries`, which
+        roughly halves the projection work for contiguous sets of cells. The output
+        for each cell is identical to `rhp_to_geo_boundary(index, geo_json=True,
+        plane=False)` up to floating point.
+        """
+        cells = {}
+        for rhpindex in rhpindices:
+            if rhpindex not in cells and rhp_py.rhp_is_valid(rhpindex, dggs):
+                suid = [int(d) if d.isdigit() else d for d in rhpindex]
+                cells[rhpindex] = dggs.cell(suid)
+
+        boundaries = dggs.cell_boundaries(cells.values(), n=2, plane=False)
+
+        rings = {}
+        for rhpindex, cell in cells.items():
+            points = [(float(p[0]), float(p[1])) for p in boundaries[cell]]
+            rings[rhpindex] = tuple(points + points[:1])  # geojson-style closed ring
+
+        return [rings.get(rhpindex) for rhpindex in rhpindices]
 
     def _crs_check_and_warn(self):
         """

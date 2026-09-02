@@ -198,6 +198,47 @@ class TestRhpToGeoBoundary:
         assert_geodataframe_equal(expected, result, check_less_precise=True)
 
 
+    def test_rhp_to_geo_boundary_matches_per_cell_wrapper(self):
+        # Caps, darts, skew quads, polar and equatorial quads at mixed resolutions,
+        # plus a duplicated index and an invalid one.
+        index = [
+            "N",
+            "S",
+            "N0",
+            "N4",
+            "N8",
+            "S2",
+            "S6",
+            "N45",
+            "Q3",
+            "R7",
+            "N216055611",
+            "S001450634",
+            "N216055611",
+            "invalid",
+        ]
+        df = pd.DataFrame({"val": range(len(index))}, index=index)
+        result = df.rhp.rhp_to_geo_boundary(verbose=False)
+
+        assert isinstance(result, gpd.GeoDataFrame)
+        assert result.crs.to_epsg() == 4326
+        assert list(result.index) == index
+        for rhpindex, geom in zip(index, result.geometry):
+            ring = rhp_py.rhp_to_geo_boundary(rhpindex, True, False)
+            if ring is None:
+                assert geom.is_empty
+            else:
+                assert list(geom.exterior.coords) == pytest.approx(list(ring))
+
+    def test_rhp_to_geo_boundary_shared_vertices_identical(self):
+        # Neighbouring cells get bit-identical copies of their shared vertices
+        index = [str(c) for c in rhp_py.WGS84_003.cell(["N", 2]).subcells(4)]
+        result = pd.DataFrame(index=index).rhp.rhp_to_geo_boundary(verbose=False)
+        vertices = [set(geom.exterior.coords) for geom in result.geometry]
+        shared = sum(len(a & b) for a, b in zip(vertices, vertices[1:]))
+        assert shared > 0
+
+
 class TestRhpGetResolution:
     def test_rhp_get_resolution(self, rhp_dataframe_with_values):
         expected = rhp_dataframe_with_values.assign(rhp_resolution=9)

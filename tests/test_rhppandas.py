@@ -304,7 +304,64 @@ class TestKRing:
 
 
 class TestCellRing:
-    pass
+    def test_rhp_0_cell_ring(self, indexed_dataframe_centre_cells):
+        expected = indexed_dataframe_centre_cells.assign(
+            rhp_cell_ring=[[h] for h in indexed_dataframe_centre_cells.index]
+        )
+        result = indexed_dataframe_centre_cells.rhp.cell_ring(0, verbose=False)
+        pd.testing.assert_frame_equal(expected, result)
+
+    def test_rhp_cell_ring(self, indexed_dataframe_centre_cells):
+        expected_indices = [
+            {
+                "N2160556110",
+                "N2160556111",
+                "N2160556112",
+                "N2160556115",
+                "N2160556118",
+                "N2160556117",
+                "N2160556116",
+                "N2160556113",
+            },
+            {
+                "N2085421110",
+                "N2085421111",
+                "N2085421112",
+                "N2085421115",
+                "N2085421118",
+                "N2085421117",
+                "N2085421116",
+                "N2085421113",
+            },
+        ]
+        expected = indexed_dataframe_centre_cells.assign(
+            rhp_cell_ring=expected_indices
+        )
+        result = indexed_dataframe_centre_cells.rhp.cell_ring(verbose=False)
+        result[COLUMNS["cell_ring"]] = result[COLUMNS["cell_ring"]].apply(
+            set
+        )  # Convert to set for testing
+        pd.testing.assert_frame_equal(expected, result)
+
+    def test_rhp_cell_ring_explode(self, indexed_dataframe_centre_cells):
+        result = indexed_dataframe_centre_cells.rhp.cell_ring(
+            explode=True, verbose=False
+        )
+        assert len(result) == len(indexed_dataframe_centre_cells) * 8
+        assert not result[COLUMNS["cell_ring"]].isin(
+            indexed_dataframe_centre_cells.index
+        ).any()
+        assert not result["lat"].isna().any()
+
+    def test_rhp_cell_ring_cube_corner(self):
+        # Only three cells meet at a cube corner, so a ring touching one is
+        # shorter than the usual 8 * k. Needs rhealpixdggs >= 0.7.
+        df = pd.DataFrame(index=["N0"])
+        result = df.rhp.cell_ring(verbose=False)
+        ring = result.iloc[0][COLUMNS["cell_ring"]]
+        assert len(ring) == 7
+        assert len(set(ring)) == 7
+        assert "N0" not in ring
 
 
 class TestRhpToParent:
@@ -333,7 +390,7 @@ class TestRhpToParent:
 class TestRhpToCenterChild:
     def test_rhp_to_center_child(self, indexed_dataframe):
         expected = indexed_dataframe.assign(
-            rhp_center_child=["N216055611444", "N208542111444"]
+            rhp_center_child=["N2160556114444", "N2085421114444"]
         )
         result = indexed_dataframe.rhp.rhp_to_center_child(13)
 
@@ -483,6 +540,15 @@ class TestLinetrace:
         assert result.shape == (2, 2)
         assert result.iloc[0][COLUMNS["linetrace"]] == expected_indices[0]
         assert result.iloc[-1][COLUMNS["linetrace"]] == expected_indices[-1]
+
+    def test_linetrace_wrap_antimeridian(self):
+        geom = LineString([(179.5, -40), (-179.5, -40)])
+        gdf = gpd.GeoDataFrame(geometry=[geom], crs="epsg:4326")
+        short = gdf.rhp.linetrace(2, wrap_antimeridian=True)
+        long = gdf.rhp.linetrace(2)
+        assert len(short.iloc[0][COLUMNS["linetrace"]]) < len(
+            long.iloc[0][COLUMNS["linetrace"]]
+        )
 
     def test_linetrace_with_values(self, rhp_geodataframe_with_polyline_values):
         result = rhp_geodataframe_with_polyline_values.rhp.linetrace(3)

@@ -88,8 +88,8 @@ Using a basic dataframe with lat/lng coordinates:
 > withcellarea
                 lat  lng  rhp_cell_area
     rhp_09                             
-    N216055147   50   14       0.258508
-    N208518546   51   15       0.258508
+    N216055147   50   14       0.219428
+    N208518546   51   15       0.219428
 ```
 
 ## Running Tests

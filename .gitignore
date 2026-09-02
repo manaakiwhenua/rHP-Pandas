@@ -10,3 +10,4 @@ dist
 rhppandas.egg-info
 /build/
 /output/
+.venv/

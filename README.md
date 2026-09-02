@@ -98,5 +98,11 @@ rhppandas uses pytest as its test framework. Make sure that your environment inc
 Typing `pytest --cov` will run the tests and print some info on test coverage of the code base.
 
 ## Deployment
-There is a PyPI and conda package `rhppandas`.
-The conda package is maintained at [conda-forge](https://github.com/conda-forge/rhealpixdggs-feedstock).
+Releases go to PyPI (`rhppandas`) and from there to conda-forge via the [rhppandas-feedstock](https://github.com/conda-forge/rhppandas-feedstock).
+
+1. Bump `version` in `pyproject.toml` on `develop` and push it.
+2. Optionally rehearse with `scripts/release.sh --test-pypi`, which uploads to TestPyPI only and creates no tag or release. `scripts/release.sh --dry-run` runs the tests, build and checks and prints the remaining commands without executing them.
+3. Run `scripts/release.sh`. It runs the tests, rebuilds `dist/`, checks it with `twine`, uploads to PyPI, pushes an annotated tag `vX.Y.Z` and opens a **draft** GitHub release with generated notes and the wheel and sdist attached. Edit the notes and publish the release on GitHub.
+4. The conda-forge autotick bot opens a PR on the feedstock a few hours after the PyPI upload. It only bumps the version and hash, so compare the recipe's run requirements with `pyproject.toml` (for example dependency floors such as `rhealpixdggs >=0.7.1`) before merging.
+
+The script refuses to run from a dirty tree, from a branch other than `develop`, from a `develop` that differs from `origin/develop`, or for a version that is already tagged, released or on PyPI. Credentials are read by `twine` from `TWINE_USERNAME=__token__` and `TWINE_PASSWORD` or from `~/.pypirc`; TestPyPI needs its own token. `gh` must be authenticated.

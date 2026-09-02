@@ -160,6 +160,13 @@ class rHPAccessor:
             All other columns' values are copied.
             Default: False
 
+        verbose : bool
+            If True, warn about missing or unsupported CRS information.
+            Default: True
+
+        Distance is graph distance (edge or corner hops), so rings are correct
+        near the corners of the DGGS cube as well.
+
         TODO: find out if rhp needs the following note (and the referenced function)
         See Also
         --------
@@ -168,9 +175,8 @@ class rHPAccessor:
         """
         if verbose:
             self._crs_check_and_warn()
-            warn(str.format(rhp_py.CELL_RING_WARNING, "k"))
 
-        func = wrapped_partial(rhp_py.k_ring, k=k, verbose=False)
+        func = wrapped_partial(rhp_py.k_ring, k=k)
         column_name = COLUMNS["k_ring"]
         if explode:
             return self._apply_index_explode(func, column_name, list)
@@ -188,12 +194,14 @@ class rHPAccessor:
 
         explode = True will add the cell ring one cell at a time (repeating existing
         entries).
+
+        Distance is graph distance (edge or corner hops), so rings are correct
+        near the corners of the DGGS cube as well.
         """
         if verbose:
             self._crs_check_and_warn()
-            warn(str.format(rhp_py.CELL_RING_WARNING, "cell"))
 
-        func = wrapped_partial(rhp_py.cell_ring, k=k, verbose=False)
+        func = wrapped_partial(rhp_py.cell_ring, k=k)
         column_name = COLUMNS["cell_ring"]
         if explode:
             return self._apply_index_explode(func, column_name, list)
@@ -305,11 +313,21 @@ class rHPAccessor:
         )
 
     def linetrace(
-        self, resolution: int, explode: bool = False, verbose: bool = True
+        self,
+        resolution: int,
+        explode: bool = False,
+        wrap_antimeridian: bool = False,
+        verbose: bool = True,
     ) -> AnyDataFrame:
-        """Experimental. An rHEALPix cell representation of a (Multi)LineString,
-        which permits repeated cells, but not if they are repeated in immediate
-        sequence.
+        """An rHEALPix cell representation of a (Multi)LineString, which permits
+        repeated cells, but not if they are repeated in immediate sequence.
+
+        Line segments are traced as straight lines in longitude-latitude space
+        (plate carree lines, not geodesics). By default a segment does not wrap
+        around the antimeridian: a segment from longitude 179 to -179 runs the
+        long way around through longitude 0. Either split lines at the
+        antimeridian beforehand, or set `wrap_antimeridian` to trace segments
+        spanning more than half a turn of longitude the short way.
 
         Parameters
         ----------
@@ -319,10 +337,14 @@ class rHPAccessor:
             If True, will explode the resulting list vertically.
             All other columns' values are copied.
             Default: False
+        wrap_antimeridian : bool
+            If True, segments spanning more than 180 degrees of longitude are
+            traced across the antimeridian instead of through longitude 0.
+            Default: False
 
         Returns
         -------
-        (Geo)DataFrame with rHEALPix cells with centroids within the input polygons.
+        (Geo)DataFrame with the sequence of rHEALPix cells traversed by each line.
         """
         if verbose:
             self._crs_check_and_warn()
@@ -333,7 +355,11 @@ class rHPAccessor:
                 return None
             else:
                 return rhp_py.linetrace(
-                    row[COLUMNS["geometry"]], resolution, plane=False, verbose=verbose
+                    row[COLUMNS["geometry"]],
+                    resolution,
+                    plane=False,
+                    verbose=verbose,
+                    wrap_antimeridian=wrap_antimeridian,
                 )
 
         df = self._df

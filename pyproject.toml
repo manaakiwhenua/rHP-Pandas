@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
  
 [project]
 name = "rhppandas"
-version = "0.2.1"
+version = "0.3.0"
 description = "Integration of rHEALPixDGGS and Pandas/GeoPandas" 
 readme = "README.md"
 license = "GPL-3.0-or-later"
@@ -25,12 +25,11 @@ classifiers = [
     "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
-    "rhealpixdggs",
+    "rhealpixdggs>=0.7.1",
     "geopandas",
     "numpy",
     "pandas",
     "shapely",
-    "numpy",
     "typing-extensions",
 ]
  

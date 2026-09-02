@@ -14,7 +14,7 @@ Use yaml file `environment.yml` to create a conda environment for basic use if y
 Adding yaml file `environment-dev.yml` to your conda environment will add the packages you need to run the automated tests.
 
 > [!NOTE]
-> The implementations of `linetrace` and `cell_ring` / `k_ring` in the backend remain incomplete. They work for well-behaved cases. But `linetrace` may fail to produce correct results if a line segment intersects the boundary of a polar cap cell, while `cell_ring` / `k_ring` cannot handle situations directly involving a corner of the dggs cube. Otherwise, development of the wrapper API within `rhealpixdggs` happened in tandem with `rhppandas` and currently matches what `h3pandas` uses from `h3-py`.
+> `rhppandas` requires `rhealpixdggs` 0.7.1 or later. That release completed the backend implementations of `linetrace` (now exact for every cell shape, including the polar cap cells) and `cell_ring` / `k_ring` (now correct around the corners of the DGGS cube, using graph distance). Line segments are traced as straight lines in longitude-latitude space and do not wrap around the antimeridian unless `linetrace` is called with `wrap_antimeridian=True`. Development of the wrapper API within `rhealpixdggs` happened in tandem with `rhppandas` and currently matches what `h3pandas` uses from `h3-py`.
 
 ## Usage Examples
 Using a basic dataframe with lat/lng coordinates:

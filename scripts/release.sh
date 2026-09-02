@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
 #
-# Release rhppandas: run the tests, rebuild dist/, check it, upload it,
-# tag the commit and open a draft GitHub release for hand editing.
+# Release rhppandas: run the tests, build and check dist/ locally, push an
+# annotated tag and open a draft GitHub release for hand editing.
+#
+# Publishing the release on GitHub triggers .github/workflows/publish.yml,
+# which rebuilds the package and uploads it to PyPI with trusted publishing.
+# No PyPI tokens are needed on this machine.
 #
 # Usage: scripts/release.sh [--test-pypi] [--dry-run] [--skip-tests]
 #
-#   --test-pypi   upload to TestPyPI only: no tag, no GitHub release.
-#                 Use this to rehearse a release.
+#   --test-pypi   do not tag or release; instead run the publish workflow
+#                 against TestPyPI from the current develop, to rehearse.
 #   --dry-run     run the local steps (tests, build, twine check) and print
-#                 the upload/tag/release commands instead of running them.
+#                 the tag, release or workflow commands instead of running them.
 #   --skip-tests  do not run pytest first.
 #
 # Run from a clean checkout of develop that matches origin/develop, with
 # the version in pyproject.toml already bumped. Needs git, gh (authenticated),
 # poetry, twine and python >= 3.11 on PATH.
-#
-# Credentials: twine reads TWINE_USERNAME=__token__ and TWINE_PASSWORD=<token>
-# from the environment, or ~/.pypirc, or prompts. TestPyPI uses its own token.
-# Nothing is stored in the repository.
 
 set -euo pipefail
 
@@ -78,7 +78,7 @@ fi
 
 log "Releasing rhppandas $VERSION from $(git rev-parse --short HEAD)"
 (( TEST_PYPI )) && echo "TestPyPI rehearsal: no tag or GitHub release will be created"
-(( DRY_RUN ))   && echo "Dry run: uploads, tags and releases are printed, not executed"
+(( DRY_RUN ))   && echo "Dry run: tag, release and workflow commands are printed, not executed"
 
 # ---- tests -------------------------------------------------------------------
 if (( SKIP_TESTS )); then
@@ -89,9 +89,10 @@ else
 fi
 
 # ---- build and check ---------------------------------------------------------
+# The workflow rebuilds from the tag before uploading; this local build only
+# catches packaging problems before anything is tagged.
 log "Building dist/"
 rm -rf dist
-# Build with the active interpreter; stop poetry creating a .venv in the checkout.
 POETRY_VIRTUALENVS_CREATE=false poetry build
 
 log "Checking dist/"
@@ -100,34 +101,33 @@ ls -l dist/
 
 # ---- TestPyPI rehearsal ------------------------------------------------------
 if (( TEST_PYPI )); then
-    log "Uploading to TestPyPI"
-    run twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+    log "Running the publish workflow against TestPyPI"
+    run gh workflow run publish.yml --ref develop -f target=testpypi
     cat <<MSG
 
-Done. To try the TestPyPI package, use index https://test.pypi.org/simple/
-with https://pypi.org/simple as an extra index (dependencies are not on
-TestPyPI) and request rhppandas==$VERSION.
-Note that TestPyPI, like PyPI, refuses to accept the same filename twice.
+Done. Follow the run with: gh run watch
+To try the TestPyPI package, use index https://test.pypi.org/simple/ with
+https://pypi.org/simple as an extra index (dependencies are not on TestPyPI)
+and request rhppandas==$VERSION.
 MSG
     exit 0
 fi
 
-# ---- PyPI, tag, draft release ------------------------------------------------
-log "Uploading to PyPI"
-run twine upload dist/*
-
+# ---- tag and draft release ---------------------------------------------------
 log "Tagging $TAG"
 run git tag -a "$TAG" -m "rhppandas $VERSION"
 run git push origin "$TAG"
 
 log "Creating draft GitHub release $TAG"
-run gh release create "$TAG" --draft --verify-tag --title "$TAG" --generate-notes dist/*
+run gh release create "$TAG" --draft --verify-tag --title "$TAG" --generate-notes
 
 cat <<MSG
 
 Done. Next steps:
   1. Edit the draft release notes on GitHub (call out dependency floors and
-     behaviour changes, which the generated PR list will not), then publish it.
+     behaviour changes, which the generated PR list will not), then publish.
+     Publishing runs the tests, rebuilds the package, uploads it to PyPI and
+     attaches the sdist and wheel to the release. Follow it with: gh run watch
   2. The conda-forge autotick bot opens a PR on
      https://github.com/conda-forge/rhppandas-feedstock a few hours after the
      PyPI upload. It only bumps version and hash: check the recipe's run

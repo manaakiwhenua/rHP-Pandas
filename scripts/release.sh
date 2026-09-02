@@ -7,8 +7,12 @@
 # which rebuilds the package and uploads it to PyPI with trusted publishing.
 # No PyPI tokens are needed on this machine.
 #
-# Usage: scripts/release.sh [--test-pypi] [--dry-run] [--skip-tests]
+# Usage: scripts/release.sh [--bump RULE] [--test-pypi] [--dry-run] [--skip-tests]
 #
+#   --bump RULE   first bump the version in pyproject.toml with `poetry version
+#                 RULE` (patch, minor, major, or an explicit version such as
+#                 0.4.0rc1), commit it as "Bump version to X.Y.Z" and push it
+#                 to develop. Without this, bump and push the version by hand.
 #   --test-pypi   do not tag or release; instead run the publish workflow
 #                 against TestPyPI from the current develop, to rehearse.
 #   --dry-run     run the local steps (tests, build, twine check) and print
@@ -16,11 +20,13 @@
 #   --skip-tests  do not run pytest first.
 #
 # Run from a clean checkout of develop that matches origin/develop, with
-# the version in pyproject.toml already bumped. Needs git, gh (authenticated),
+# the version in pyproject.toml already bumped or --bump given. Needs git,
+# gh (authenticated),
 # poetry, twine and python >= 3.11 on PATH.
 
 set -euo pipefail
 
+BUMP=""
 TEST_PYPI=0
 DRY_RUN=0
 SKIP_TESTS=0
@@ -32,6 +38,8 @@ run()   { if (( DRY_RUN )); then printf '(dry-run) %s\n' "$*"; else "$@"; fi; }
 
 while (( $# )); do
     case "$1" in
+        --bump)       [[ $# -ge 2 ]] || die "--bump needs a rule: patch, minor, major or a version"
+                      BUMP="$2"; shift ;;
         --test-pypi)  TEST_PYPI=1 ;;
         --dry-run)    DRY_RUN=1 ;;
         --skip-tests) SKIP_TESTS=1 ;;
@@ -53,8 +61,6 @@ twine --version >/dev/null 2>&1 || die "twine at $(command -v twine) does not ru
 gh auth status >/dev/null 2>&1 || die "gh is not authenticated (run: gh auth login)"
 
 # ---- version and repository state -------------------------------------------
-VERSION=$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')
-TAG="v$VERSION"
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 [[ "$BRANCH" == "develop" ]] || die "release from develop, not $BRANCH"
@@ -62,6 +68,19 @@ BRANCH=$(git rev-parse --abbrev-ref HEAD)
 git fetch -q origin develop --tags
 [[ "$(git rev-parse HEAD)" == "$(git rev-parse origin/develop)" ]] \
     || die "develop differs from origin/develop; push or pull first"
+
+export POETRY_VIRTUALENVS_CREATE=false  # never create a .venv in the checkout
+VERSION=$(poetry version --short)
+if [[ -n "$BUMP" ]]; then
+    (( TEST_PYPI )) && die "--bump cannot be combined with --test-pypi; a rehearsal does not change the version"
+    # Work out the new version first so the guards below check the right tag.
+    if ! bump_output=$(poetry version --dry-run "$BUMP" 2>&1); then
+        die "poetry version could not apply rule '$BUMP': $bump_output"
+    fi
+    VERSION=$(sed -n 's/.* to //p' <<<"$bump_output")
+    [[ -n "$VERSION" ]] || die "could not read the new version from: $bump_output"
+fi
+TAG="v$VERSION"
 
 if (( ! TEST_PYPI )); then
     if git rev-parse -q --verify "refs/tags/$TAG" >/dev/null; then
@@ -78,7 +97,19 @@ fi
 
 log "Releasing rhppandas $VERSION from $(git rev-parse --short HEAD)"
 (( TEST_PYPI )) && echo "TestPyPI rehearsal: no tag or GitHub release will be created"
-(( DRY_RUN ))   && echo "Dry run: tag, release and workflow commands are printed, not executed"
+(( DRY_RUN ))   && echo "Dry run: bump, tag, release and workflow commands are printed, not executed"
+
+# ---- optional version bump ---------------------------------------------------
+# Committed straight to develop, as previous "Bump version" commits were. If a
+# later step fails, the bump stays in place: fix the problem and rerun without
+# --bump.
+if [[ -n "$BUMP" ]]; then
+    log "Bumping version to $VERSION"
+    run poetry version "$BUMP"
+    run git commit -q -m "Bump version to $VERSION" pyproject.toml
+    run git push origin develop
+    (( DRY_RUN )) && echo "(dry-run) note: dist/ below is built from the current version, not $VERSION"
+fi
 
 # ---- tests -------------------------------------------------------------------
 if (( SKIP_TESTS )); then
@@ -93,7 +124,7 @@ fi
 # catches packaging problems before anything is tagged.
 log "Building dist/"
 rm -rf dist
-POETRY_VIRTUALENVS_CREATE=false poetry build
+poetry build
 
 log "Checking dist/"
 twine check dist/*

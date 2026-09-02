@@ -100,7 +100,7 @@ Typing `pytest --cov` will run the tests and print some info on test coverage of
 ## Deployment
 Releases go to PyPI (`rhppandas`) and from there to conda-forge via the [rhppandas-feedstock](https://github.com/conda-forge/rhppandas-feedstock). PyPI uploads are done by GitHub Actions with [trusted publishing](https://docs.pypi.org/trusted-publishers/), so no PyPI tokens are needed anywhere.
 
-1. Bump `version` in `pyproject.toml` on `develop` and push it.
+1. Bump `version` in `pyproject.toml` on `develop` and push it, or let the script do it with `--bump patch|minor|major` (or an explicit version), which runs `poetry version`, commits the change as "Bump version to X.Y.Z" and pushes it to `develop` before continuing.
 2. Optionally rehearse with `scripts/release.sh --test-pypi`, which runs the tests and build locally and then runs the publish workflow against TestPyPI from `develop`, creating no tag or release. `scripts/release.sh --dry-run` runs the local steps and prints the remaining commands without executing them.
 3. Run `scripts/release.sh`. It runs the tests, rebuilds and checks `dist/`, pushes an annotated tag `vX.Y.Z` and opens a **draft** GitHub release with generated notes. Edit the notes and publish the release on GitHub.
 4. Publishing the release triggers `.github/workflows/publish.yml`: it runs the test matrix, checks that the tag matches the version in `pyproject.toml`, builds the sdist and wheel, uploads them to PyPI and attaches them to the release.

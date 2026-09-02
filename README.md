@@ -98,14 +98,10 @@ rhppandas uses pytest as its test framework. Make sure that your environment inc
 Typing `pytest --cov` will run the tests and print some info on test coverage of the code base.
 
 ## Deployment
-Releases go to PyPI (`rhppandas`) and from there to conda-forge via the [rhppandas-feedstock](https://github.com/conda-forge/rhppandas-feedstock). PyPI uploads are done by GitHub Actions with [trusted publishing](https://docs.pypi.org/trusted-publishers/), so no PyPI tokens are needed anywhere.
+Releases go to PyPI, then to conda-forge via the [rhppandas-feedstock](https://github.com/conda-forge/rhppandas-feedstock).
 
-1. Bump `version` in `pyproject.toml` on `develop` and push it, or let the script do it with `--bump patch|minor|major` (or an explicit version), which runs `poetry version`, commits the change as "Bump version to X.Y.Z" and pushes it to `develop` before continuing.
-2. Optionally rehearse with `scripts/release.sh --test-pypi`, which runs the tests and build locally and then runs the publish workflow against TestPyPI from `develop`, creating no tag or release. `scripts/release.sh --dry-run` runs the local steps and prints the remaining commands without executing them.
-3. Run `scripts/release.sh`. It runs the tests, rebuilds and checks `dist/`, pushes an annotated tag `vX.Y.Z` and opens a **draft** GitHub release with generated notes. Edit the notes and publish the release on GitHub.
-4. Publishing the release triggers `.github/workflows/publish.yml`: it runs the test matrix, checks that the tag matches the version in `pyproject.toml`, builds the sdist and wheel, uploads them to PyPI and attaches them to the release.
-5. The conda-forge autotick bot opens a PR on the feedstock a few hours after the PyPI upload. It only bumps the version and hash, so compare the recipe's run requirements with `pyproject.toml` (for example dependency floors such as `rhealpixdggs >=0.7.1`) before merging.
-
-The script refuses to run from a dirty tree, from a branch other than `develop`, from a `develop` that differs from `origin/develop`, or for a version that is already tagged, released or on PyPI. `gh` must be authenticated.
-
-One-time setup for trusted publishing: on pypi.org (and test.pypi.org for rehearsals) add a trusted publisher to the `rhppandas` project with owner `manaakiwhenua`, repository `rHP-Pandas`, workflow `publish.yml` and environment `pypi` (`testpypi` on TestPyPI). The GitHub environments are created automatically the first time the workflow runs; adding required reviewers to the `pypi` environment in the repository settings gives a manual approval step before each upload.
+From a clean, pushed `develop`:
+```
+scripts/release.sh --bump patch|minor|major
+```
+This runs the tests, bumps the version, pushes a `vX.Y.Z` tag and opens a draft GitHub release. Edit the notes and publish it; that triggers `.github/workflows/publish.yml`, which uploads to PyPI using trusted publishing (no tokens). `scripts/release.sh --help` lists the other options, including a TestPyPI rehearsal. The conda-forge bot then opens a feedstock PR; check its run requirements against `pyproject.toml` before merging.

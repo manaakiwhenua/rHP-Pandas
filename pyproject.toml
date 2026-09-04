@@ -25,7 +25,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: GIS",
 ]
 dependencies = [
-    "rhealpixdggs>=0.7.1",
+    "rhealpixdggs>=0.8.1",
     "geopandas",
     "numpy",
     "pandas",

@@ -24,7 +24,7 @@ jobs:
           cache: pip
 
       # Installing from pyproject.toml exercises the declared dependency
-      # floors (e.g. rhealpixdggs>=0.7.1) rather than the conda environment.
+      # floors (e.g. rhealpixdggs>=0.8.1) rather than the conda environment.
       - name: Install package with test dependencies
         run: |
           python -m pip install --upgrade pip

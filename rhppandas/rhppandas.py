@@ -1,6 +1,7 @@
 from typing import Union, Literal, Callable, Any
 from warnings import warn
 
+import numpy as np
 import shapely
 import pandas as pd
 import geopandas as gpd
@@ -67,11 +68,8 @@ class rHPAccessor:
             lngs = self._df[lng_col]
             lats = self._df[lat_col]
 
-        # Index conversion
-        rhpaddresses = [
-            rhp_py.geo_to_rhp(lat, lng, resolution, False)
-            for lat, lng in zip(lats, lngs)
-        ]
+        # Index conversion, all points in one array call
+        rhpaddresses = self._cells_from_points(lngs, lats, resolution)
 
         # Add results to DataFrame
         colname = f"{COLUMNS['prefix']}{resolution:02}"
@@ -96,19 +94,19 @@ class rHPAccessor:
         if verbose:
             self._crs_check_and_warn()
 
-        return self._apply_index_assign(
-            wrapped_partial(rhp_py.rhp_to_geo, geo_json=True, plane=False),
-            COLUMNS["geometry"],
-            lambda x: shapely.geometry.Point(x),
-            lambda x: gpd.GeoDataFrame(
-                x, crs="epsg:4326"
-            ),  # TODO: add correct coordinate system?
-        )
+        # Centroids of all cells in one array call; invalid indices give NaN rows
+        centroids = WGS84_003.centroids(self._df.index, plane=False)
+        geometry = self._geometries(shapely.points, centroids, shapely.Point())
+        assign_args = {COLUMNS["geometry"]: geometry}
+
+        return gpd.GeoDataFrame(
+            self._df.assign(**assign_args), crs="epsg:4326"
+        )  # TODO: add correct coordinate system?
 
     def rhp_to_geo_boundary(self, verbose=True) -> AnyDataFrame:
         """Add `geometry` with rHEALPix squares to the DataFrame. Assumes rHEALPix index.
 
-        Cell boundaries are computed in one batch so that vertices shared by
+        Cell boundaries are computed in one array call so that vertices shared by
         neighbouring cells are projected only once. Neighbouring cells therefore
         get bit-identical shared vertices. Invalid indices get an empty Polygon.
 
@@ -119,10 +117,10 @@ class rHPAccessor:
         if verbose:
             self._crs_check_and_warn()
 
-        geometry = [
-            shapely.geometry.Polygon(ring) if ring is not None else shapely.Polygon()
-            for ring in self._cell_boundaries(self._df.index)
-        ]
+        # Boundaries of all cells as one (n_cells, 4, 2) array of lng/lat vertices;
+        # invalid indices give NaN rows. shapely closes the rings itself.
+        rings = WGS84_003.boundary_array(self._df.index, n=2, plane=False)
+        geometry = self._geometries(shapely.polygons, rings, shapely.Polygon())
         assign_args = {COLUMNS["geometry"]: geometry}
 
         return gpd.GeoDataFrame(
@@ -618,34 +616,40 @@ class rHPAccessor:
         return finalizer(result)
 
     @staticmethod
-    def _cell_boundaries(
-        rhpindices, dggs: RHEALPixDGGS = WGS84_003
-    ) -> list[Union[tuple[tuple[float, float], ...], None]]:
+    def _cells_from_points(
+        lngs, lats, resolution: int, dggs: RHEALPixDGGS = WGS84_003
+    ) -> list[Union[str, None]]:
         """
-        Helper method. Returns the closed boundary ring of each rHEALPix index as a
-        tuple of (longitude, latitude) pairs, in the same order as `rhpindices`.
-        Invalid indices yield None.
-
-        Unlike calling `rhp_wrappers.rhp_to_geo_boundary` once per index, this
-        projects every distinct vertex once via `RHEALPixDGGS.cell_boundaries`, which
-        roughly halves the projection work for contiguous sets of cells. The output
-        for each cell is identical to `rhp_to_geo_boundary(index, geo_json=True,
-        plane=False)` up to floating point.
+        Helper method. Returns the rHEALPix index of the cell containing each
+        (longitude, latitude) point at `resolution`, in input order, using one array
+        call for all points. Points with no cell (NaN coordinates, or outside the
+        planar image) yield None, as `rhp_wrappers.geo_to_rhp` does.
         """
-        cells = {}
-        for rhpindex in rhpindices:
-            if rhpindex not in cells and rhp_py.rhp_is_valid(rhpindex, dggs):
-                suid = [int(d) if d.isdigit() else d for d in rhpindex]
-                cells[rhpindex] = dggs.cell(suid)
+        cells = dggs.cells_from_points(
+            np.asarray(lngs, dtype=float),
+            np.asarray(lats, dtype=float),
+            resolution,
+            plane=False,
+        )
 
-        boundaries = dggs.cell_boundaries(cells.values(), n=2, plane=False)
+        return [cell or None for cell in cells.tolist()]
 
-        rings = {}
-        for rhpindex, cell in cells.items():
-            points = [(float(p[0]), float(p[1])) for p in boundaries[cell]]
-            rings[rhpindex] = tuple(points + points[:1])  # geojson-style closed ring
+    @staticmethod
+    def _geometries(constructor: Callable, coords: np.ndarray, empty) -> np.ndarray:
+        """
+        Helper method. Builds one geometry per leading row of `coords` with a
+        vectorised shapely constructor (`shapely.points` for an (n, 2) array,
+        `shapely.polygons` for an (n, vertices, 2) array). Rows containing NaN, which
+        is how the rhealpixdggs array methods mark invalid indices, become `empty`.
+        """
+        geometry = np.empty(len(coords), dtype=object)
+        geometry.fill(empty)
+        if len(coords):
+            valid = ~np.isnan(coords.reshape(len(coords), -1)).any(axis=1)
+            if valid.any():
+                geometry[valid] = constructor(coords[valid])
 
-        return [rings.get(rhpindex) for rhpindex in rhpindices]
+        return geometry
 
     def _crs_check_and_warn(self):
         """

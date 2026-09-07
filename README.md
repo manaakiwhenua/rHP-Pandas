@@ -14,7 +14,7 @@ Use yaml file `environment.yml` to create a conda environment for basic use if y
 Adding yaml file `environment-dev.yml` to your conda environment will add the packages you need to run the automated tests.
 
 > [!NOTE]
-> `rhppandas` requires `rhealpixdggs` 0.8.1 or later. That release corrected the centroids of the polar dart cells (`rhp_to_geo`) and made cell geometry, `polyfill` and `linetrace` much faster near the poles by projecting points in batches. Line segments are traced as straight lines in longitude-latitude space and do not wrap around the antimeridian unless `linetrace` is called with `wrap_antimeridian=True`. Development of the wrapper API within `rhealpixdggs` happened in tandem with `rhppandas` and currently matches what `h3pandas` uses from `h3-py`.
+> `rhppandas` requires `rhealpixdggs` 0.8.3 or later. The 0.8 series corrected the centroids of the polar dart cells (`rhp_to_geo`), made cell geometry, `polyfill` and `linetrace` much faster near the poles by projecting points in batches, and added array methods that `geo_to_rhp`, `rhp_to_geo` and `rhp_to_geo_boundary` use to convert a whole dataframe in a few array calls instead of one call per row. Line segments are traced as straight lines in longitude-latitude space and do not wrap around the antimeridian unless `linetrace` is called with `wrap_antimeridian=True`. Development of the wrapper API within `rhealpixdggs` happened in tandem with `rhppandas` and currently matches what `h3pandas` uses from `h3-py`.
 
 ## Usage Examples
 Using a basic dataframe with lat/lng coordinates:

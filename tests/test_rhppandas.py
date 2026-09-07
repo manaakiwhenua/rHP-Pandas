@@ -162,11 +162,10 @@ class TestGeoToRhp:
             ignore_index=True,
         )
         result = df.rhp.geo_to_rhp(9, set_index=False, verbose=False)
-        assert result[f"{COLUMNS['prefix']}09"].tolist() == [
-            "N216055147",
-            "N208518546",
-            None,
-        ]
+        cells = result[f"{COLUMNS['prefix']}09"]
+        assert cells.iloc[:2].tolist() == ["N216055147", "N208518546"]
+        # None in the source list; pandas may store it as None or NaN
+        assert pd.isna(cells.iloc[2])
 
     def test_geo_to_rhp_empty(self):
         result = pd.DataFrame({"lat": [], "lng": []}).rhp.geo_to_rhp(9, verbose=False)

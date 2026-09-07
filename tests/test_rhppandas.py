@@ -143,6 +143,35 @@ class TestGeoToRhp:
         with pytest.raises(ValueError):
             basic_geodataframe_polygon.rhp.geo_to_rhp(9)
 
+    def test_geo_to_rhp_matches_per_point_wrapper(self):
+        # Poles, antimeridian, cube face and polar cap boundaries, both hemispheres
+        lngs = [0.0, 0.0, 180.0, -180.0, 179.999, -45.0, 45.0, 135.0, 14.0, 174.8, 0.0]
+        lats = [90.0, -90.0, 0.0, 0.0, 41.9, 41.81, -41.81, 0.0, 50.0, -41.3, 0.0]
+        df = pd.DataFrame({"lat": lats, "lng": lngs})
+        for resolution in (0, 1, 5, 9):
+            result = df.rhp.geo_to_rhp(resolution, verbose=False)
+            expected = [
+                rhp_py.geo_to_rhp(lat, lng, resolution, False)
+                for lat, lng in zip(lats, lngs)
+            ]
+            assert list(result.index) == expected
+
+    def test_geo_to_rhp_nan_coordinates(self, basic_dataframe):
+        df = pd.concat(
+            [basic_dataframe, pd.DataFrame({"lat": [float("nan")], "lng": [14.0]})],
+            ignore_index=True,
+        )
+        result = df.rhp.geo_to_rhp(9, set_index=False, verbose=False)
+        cells = result[f"{COLUMNS['prefix']}09"]
+        assert cells.iloc[:2].tolist() == ["N216055147", "N208518546"]
+        # None in the source list; pandas may store it as None or NaN
+        assert pd.isna(cells.iloc[2])
+
+    def test_geo_to_rhp_empty(self):
+        result = pd.DataFrame({"lat": [], "lng": []}).rhp.geo_to_rhp(9, verbose=False)
+        assert len(result) == 0
+        assert result.index.name == f"{COLUMNS['prefix']}09"
+
 
 class TestRhpToGeo:
     def test_rhp_to_geo(self, indexed_dataframe):
@@ -153,6 +182,32 @@ class TestRhpToGeo:
         result = indexed_dataframe.rhp.rhp_to_geo(verbose=False)
 
         assert_geodataframe_equal(expected, result, check_less_precise=True)
+
+
+    def test_rhp_to_geo_matches_per_cell_wrapper(self):
+        # Caps, darts, skew quads, polar and equatorial quads at mixed resolutions,
+        # plus a duplicated index and an invalid one.
+        index = ["N", "S", "N0", "N4", "N8", "S2", "S6", "N45", "Q3", "R7",
+                 "N216055611", "S001450634", "N216055611", "invalid"]
+        df = pd.DataFrame({"val": range(len(index))}, index=index)
+        result = df.rhp.rhp_to_geo(verbose=False)
+
+        assert isinstance(result, gpd.GeoDataFrame)
+        assert result.crs.to_epsg() == 4326
+        assert list(result.index) == index
+        for rhpindex, geom in zip(index, result.geometry):
+            centroid = rhp_py.rhp_to_geo(rhpindex, True, False)
+            if centroid is None:
+                assert geom.is_empty
+            else:
+                assert (geom.x, geom.y) == pytest.approx(centroid, abs=1e-9)
+
+    def test_rhp_to_geo_empty(self):
+        result = pd.DataFrame(index=pd.Index([], name="rhp_09")).rhp.rhp_to_geo(
+            verbose=False
+        )
+        assert isinstance(result, gpd.GeoDataFrame)
+        assert len(result) == 0
 
 
 class TestRhpToGeoBoundary:
@@ -229,6 +284,13 @@ class TestRhpToGeoBoundary:
                 assert geom.is_empty
             else:
                 assert list(geom.exterior.coords) == pytest.approx(list(ring))
+
+    def test_rhp_to_geo_boundary_empty(self):
+        result = pd.DataFrame(
+            index=pd.Index([], name="rhp_09")
+        ).rhp.rhp_to_geo_boundary(verbose=False)
+        assert isinstance(result, gpd.GeoDataFrame)
+        assert len(result) == 0
 
     def test_rhp_to_geo_boundary_shared_vertices_identical(self):
         # Neighbouring cells get bit-identical copies of their shared vertices

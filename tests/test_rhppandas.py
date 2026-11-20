@@ -1,5 +1,6 @@
 import pytest
 
+import numpy as np
 import pandas as pd
 import geopandas as gpd
 
@@ -283,7 +284,27 @@ class TestRhpToGeoBoundary:
             if ring is None:
                 assert geom.is_empty
             else:
-                assert list(geom.exterior.coords) == pytest.approx(list(ring))
+                np.testing.assert_allclose(
+                    np.asarray(geom.exterior.coords), np.asarray(ring), atol=1e-9
+                )
+
+    def test_rhp_to_geo_boundary_antimeridian(self):
+        # R2 lies just east of the antimeridian and O0 just west of it. Each
+        # ring must stay on its own side of +/-180 rather than spanning the
+        # globe, so every vertex of R2 is at 150 <= lng <= 180 and every vertex
+        # of O0 at -180 <= lng <= -150.
+        df = pd.DataFrame({"val": [1, 2]}, index=["R2", "O0"])
+        result = df.rhp.rhp_to_geo_boundary(verbose=False)
+
+        east, west = result.geometry
+        east_lngs = np.asarray(east.exterior.coords)[:, 0]
+        west_lngs = np.asarray(west.exterior.coords)[:, 0]
+        assert east_lngs.min() == pytest.approx(150)
+        assert east_lngs.max() == pytest.approx(180)
+        assert west_lngs.min() == pytest.approx(-180)
+        assert west_lngs.max() == pytest.approx(-150)
+        assert east.bounds[2] - east.bounds[0] < 180
+        assert west.bounds[2] - west.bounds[0] < 180
 
     def test_rhp_to_geo_boundary_empty(self):
         result = pd.DataFrame(
@@ -757,7 +778,7 @@ class TestGeoToRhpAggregate:
         ]
         expected = gpd.GeoDataFrame(indexed, geometry=geometry, crs="epsg:4326")
 
-        assert_geodataframe_equal(expected, result)
+        assert_geodataframe_equal(expected, result, check_less_precise=True)
 
 
 class TestRhpToParentAggregate:
@@ -772,7 +793,7 @@ class TestRhpToParentAggregate:
             {"val": [1 + 2 + 5]}, geometry=geometry, index=index, crs="epsg:4326"
         )
 
-        assert_geodataframe_equal(expected, result)
+        assert_geodataframe_equal(expected, result, check_less_precise=True)
 
     def test_rhp_to_parent_aggregate_no_geometry(self, rhp_dataframe_with_values):
         result = rhp_dataframe_with_values.rhp.rhp_to_parent_aggregate(

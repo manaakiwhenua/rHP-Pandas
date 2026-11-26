@@ -3,9 +3,7 @@ channels:
 dependencies:
   # Required
   - python==3.11.5
+  - rhealpixdggs>=1.0
   - shapely
   - pandas
   - geopandas>=0.9.*
-  - pip
-  - pip:
-    - rhealpixdggs>=1.0
